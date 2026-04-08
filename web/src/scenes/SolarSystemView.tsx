@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useState } from "react";
-import { Canvas, useFrame, ThreeEvent, extend } from "@react-three/fiber";
+import { Canvas, useFrame, useLoader, ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Line, Html, Stars as DreiStars } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
@@ -7,171 +7,53 @@ import { engine } from "../engine/wasm-bridge";
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 
-const PLANETS: [string, number, number, number, string, boolean][] = [
-  ["Mercury", 0.387, 0.241, 2440, "#8c8c8c", false],
-  ["Venus", 0.723, 0.615, 6052, "#e8c87a", false],
-  ["Earth", 1.0, 1.0, 6371, "#4a90d9", false],
-  ["Mars", 1.524, 1.881, 3390, "#c1440e", false],
-  ["Jupiter", 5.203, 11.86, 69911, "#c88b3a", false],
-  ["Saturn", 9.537, 29.46, 58232, "#d4b87a", true],
+// [name, semiMajorAxis_AU, orbitalPeriod_yr, radius_km, color, hasRings, inclination_deg, texture]
+const PLANETS: [string, number, number, number, string, boolean, number, string][] = [
+  ["Mercury", 0.387, 0.241, 2440, "#8c8c8c", false, 7.0, "mercury.jpg"],
+  ["Venus", 0.723, 0.615, 6052, "#e8c87a", false, 3.39, "venus.jpg"],
+  ["Earth", 1.0, 1.0, 6371, "#4a90d9", false, 0.0, "earth.jpg"],
+  ["Mars", 1.524, 1.881, 3390, "#c1440e", false, 1.85, "mars.jpg"],
+  ["Jupiter", 5.203, 11.86, 69911, "#c88b3a", false, 1.31, "jupiter.jpg"],
+  ["Saturn", 9.537, 29.46, 58232, "#d4b87a", true, 2.49, "saturn.jpg"],
 ];
 
+// Major moons: [name, parentPlanet, orbitalRadius_km, radius_km, color]
+const MOONS: [string, string, number, number, string][] = [
+  ["Moon", "Earth", 384400, 1737, "#c0c0c0"],
+  ["Phobos", "Mars", 9376, 11, "#8a7d6b"],
+  ["Deimos", "Mars", 23460, 6, "#8a7d6b"],
+  ["Io", "Jupiter", 421700, 1822, "#c8a432"],
+  ["Europa", "Jupiter", 671100, 1561, "#b8a888"],
+  ["Ganymede", "Jupiter", 1070400, 2634, "#888078"],
+  ["Callisto", "Jupiter", 1882700, 2410, "#555048"],
+  ["Titan", "Saturn", 1221870, 2575, "#d4a030"],
+  ["Enceladus", "Saturn", 238020, 252, "#f0f0f0"],
+  ["Rhea", "Saturn", 527040, 764, "#c0b8a8"],
+];
+
+const BASE = import.meta.env.BASE_URL;
 const AU = 10;
 const PLANET_SCALE = 0.0002;
 const SUN_R = 0.5;
 const MIN_R = 0.12;
 const TIME_SPEED = 0.5;
+const MOON_ORBIT_SCALE = 0.000003; // Scale down moon orbital radii to scene units
+const MOON_SIZE_SCALE = 0.00015; // Moon body size
+const MIN_MOON_R = 0.04;
+const MIN_MOON_ORBIT = 0.25;
 
 interface PData {
   name: string; au: number; period: number; rKm: number;
-  color: string; rings: boolean; df: number; lost: number;
+  color: string; rings: boolean; incl: number; texture: string;
+  df: number; lost: number;
 }
 
-// ─── Procedural planet GLSL ────────────────────────────────────────────────
-
-const NOISE_GLSL = `
-  vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
-  vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
-  vec4 perm(vec4 x){return mod289(((x*34.0)+1.0)*x);}
-  float noise(vec3 p){
-    vec3 a=floor(p);vec3 d=p-a;d=d*d*(3.0-2.0*d);
-    vec4 b=a.xxyy+vec4(0.0,1.0,0.0,1.0);
-    vec4 k1=perm(b.xyxy);vec4 k2=perm(k1.xyxy+b.zzww);
-    vec4 c=k2+a.zzzz;vec4 k3=perm(c);vec4 k4=perm(c+1.0);
-    vec4 o1=fract(k3*(1.0/41.0));vec4 o2=fract(k4*(1.0/41.0));
-    vec4 o3=o2*d.z+o1*(1.0-d.z);vec2 o4=o3.yw*d.x+o3.xz*(1.0-d.x);
-    return o4.y*d.y+o4.x*(1.0-d.y);
-  }
-  float fbm(vec3 p){float v=0.0;float a=0.5;for(int i=0;i<5;i++){v+=a*noise(p);p*=2.0;a*=0.5;}return v;}
-`;
-
-function planetVertexShader() {
-  return `
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vWorldPos;
-    void main(){
-      vUv=uv; vNormal=normalize(normalMatrix*normal);
-      vWorldPos=(modelMatrix*vec4(position,1.0)).xyz;
-      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
-    }
-  `;
-}
-
-function planetFragmentShader(planetType: string) {
-  return `
-    ${NOISE_GLSL}
-    uniform float uTime;
-    uniform vec3 uSunDir;
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vWorldPos;
-
-    void main(){
-      float lat=(vUv.y-0.5)*3.14159;
-      float lon=vUv.x*6.28318;
-      vec3 samplePos=vec3(cos(lat)*cos(lon),sin(lat),cos(lat)*sin(lon));
-      float n=fbm(samplePos*${planetType === "Jupiter" || planetType === "Saturn" ? "3.0" : "6.0"});
-      float n2=fbm(samplePos*12.0+vec3(42.0));
-
-      vec3 col;
-      ${getPlanetColorGLSL(planetType)}
-
-      // Day/night terminator
-      float sunDot=dot(vNormal, uSunDir);
-      float dayFactor=smoothstep(-0.15,0.2,sunDot);
-
-      // Night side darkening
-      vec3 nightCol=col*0.08;
-      ${planetType === "Earth" ? `
-        // City lights on night side
-        float cities=step(0.72,fbm(samplePos*30.0))*step(0.3,fbm(samplePos*15.0));
-        nightCol+=vec3(1.0,0.85,0.4)*cities*0.6;
-      ` : ""}
-
-      col=mix(nightCol,col,dayFactor);
-
-      // Subtle rim light
-      float rim=1.0-max(dot(vNormal,normalize(cameraPosition-vWorldPos)),0.0);
-      col+=vec3(0.2,0.3,0.5)*pow(rim,3.0)*0.15;
-
-      gl_FragColor=vec4(col,1.0);
-    }
-  `;
-}
-
-function getPlanetColorGLSL(type: string): string {
-  switch (type) {
-    case "Earth": return `
-      float ocean=smoothstep(0.42,0.48,n);
-      vec3 land=mix(vec3(0.15,0.35,0.08),vec3(0.5,0.42,0.25),n2);
-      vec3 oceanCol=mix(vec3(0.05,0.15,0.4),vec3(0.1,0.25,0.55),n2*0.5);
-      col=mix(oceanCol,land,ocean);
-      // Polar ice
-      float polar=smoothstep(0.85,0.95,abs(lat)/1.57);
-      col=mix(col,vec3(0.9,0.92,0.95),polar);
-      // Clouds
-      float cloud=smoothstep(0.5,0.65,fbm(samplePos*8.0+uTime*0.02));
-      col=mix(col,vec3(0.95),cloud*0.6);
-    `;
-    case "Mars": return `
-      vec3 base=mix(vec3(0.6,0.2,0.05),vec3(0.75,0.35,0.15),n);
-      vec3 dark=vec3(0.3,0.12,0.05);
-      col=mix(base,dark,smoothstep(0.4,0.55,n2));
-      // Polar ice caps
-      float polar=smoothstep(0.8,0.95,abs(lat)/1.57);
-      col=mix(col,vec3(0.85,0.88,0.9),polar*0.8);
-      // Olympus Mons region (dark spot)
-      float feature=smoothstep(0.65,0.7,fbm(samplePos*4.0+vec3(10.0)));
-      col=mix(col,vec3(0.4,0.15,0.05),feature*0.3);
-    `;
-    case "Jupiter": return `
-      // Horizontal bands
-      float band=sin(lat*12.0+n*2.0)*0.5+0.5;
-      vec3 light=vec3(0.85,0.75,0.55);
-      vec3 dark=vec3(0.6,0.35,0.15);
-      col=mix(dark,light,band);
-      // Great red spot region
-      float spot=1.0-smoothstep(0.0,0.15,length(vec2(lon-2.5,lat+0.4)));
-      col=mix(col,vec3(0.75,0.25,0.1),spot*0.7);
-      // Turbulence in bands
-      col+=vec3(n2*0.1-0.05);
-    `;
-    case "Saturn": return `
-      float band=sin(lat*10.0+n*1.5)*0.5+0.5;
-      vec3 light=vec3(0.9,0.82,0.6);
-      vec3 dark=vec3(0.7,0.6,0.4);
-      col=mix(dark,light,band);
-      col+=vec3(n2*0.08-0.04);
-    `;
-    case "Venus": return `
-      // Thick atmosphere with subtle cloud bands
-      float cloud=fbm(samplePos*4.0+uTime*0.01);
-      col=mix(vec3(0.8,0.65,0.3),vec3(0.9,0.8,0.5),cloud);
-      col+=vec3(0.05,0.02,0.0)*fbm(samplePos*8.0);
-    `;
-    case "Mercury": return `
-      // Cratered gray surface
-      float crater=fbm(samplePos*15.0);
-      col=mix(vec3(0.35,0.33,0.3),vec3(0.55,0.52,0.48),n);
-      // Dark crater floors
-      col*=0.8+crater*0.4;
-      col-=vec3(0.1)*smoothstep(0.6,0.65,fbm(samplePos*25.0));
-    `;
-    default: return `col=vec3(0.5);`;
-  }
-}
-
-// ─── Time zone / grid overlay shader ───────────────────────────────────────
+// ─── Grid overlay shader ───────────────────────────────────────────────────
 
 const gridVertexShader = `
   varying vec2 vUv;
-  void main(){
-    vUv=uv;
-    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
-  }
+  void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }
 `;
-
 const gridFragmentShader = `
   uniform float uTimeZones;
   uniform vec3 uGridColor;
@@ -179,19 +61,12 @@ const gridFragmentShader = `
   void main(){
     float lon=vUv.x*6.28318;
     float lat=(vUv.y-0.5)*3.14159;
-
-    // Longitude lines (time zones)
-    float tzInterval=6.28318/uTimeZones;
-    float lonLine=1.0-smoothstep(0.008,0.012,abs(mod(lon+tzInterval*0.5,tzInterval)-tzInterval*0.5));
-
-    // Latitude lines (every 30 degrees)
-    float latInterval=3.14159/6.0;
-    float latLine=1.0-smoothstep(0.008,0.012,abs(mod(lat+latInterval*0.5,latInterval)-latInterval*0.5));
-
-    // Equator (thicker)
+    float tzInt=6.28318/uTimeZones;
+    float lonLine=1.0-smoothstep(0.008,0.012,abs(mod(lon+tzInt*0.5,tzInt)-tzInt*0.5));
+    float latInt=3.14159/6.0;
+    float latLine=1.0-smoothstep(0.008,0.012,abs(mod(lat+latInt*0.5,latInt)-latInt*0.5));
     float equator=1.0-smoothstep(0.01,0.018,abs(lat));
-
-    float grid=max(max(lonLine,latLine),equator)*0.5;
+    float grid=max(max(lonLine,latLine),equator)*0.4;
     gl_FragColor=vec4(uGridColor,grid);
   }
 `;
@@ -202,12 +77,14 @@ export function SolarSystemView() {
   const [selected, setSelected] = useState("Earth");
   const [hovered, setHovered] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(true);
+  const [showMoons, setShowMoons] = useState(true);
+  const [showOrbits, setShowOrbits] = useState(true);
 
   const planets: PData[] = useMemo(() => {
     const dd = engine.getSolarSystemDilation();
-    return PLANETS.map(([n, a, p, r, c, rings]) => {
+    return PLANETS.map(([n, a, p, r, c, rings, incl, tex]) => {
       const d = dd.find((x) => x.name === n);
-      return { name: n, au: a, period: p, rKm: r, color: c, rings, df: d?.dilation_factor ?? 1, lost: d?.seconds_lost_per_year ?? 0 };
+      return { name: n, au: a, period: p, rKm: r, color: c, rings, incl, texture: tex, df: d?.dilation_factor ?? 1, lost: d?.seconds_lost_per_year ?? 0 };
     });
   }, []);
 
@@ -218,28 +95,28 @@ export function SolarSystemView() {
   return (
     <div style={S.container} className="scene-layout">
       <div style={S.canvas} className="scene-canvas">
-        <Canvas camera={{ position: [0, 18, 25], fov: 45 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }} style={{ background: "#020208" }}>
+        <Canvas camera={{ position: [0, 25, 35], fov: 45 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }} style={{ background: "#020208" }}>
           <color attach="background" args={["#020208"]} />
-          <ambientLight intensity={0.08} />
+          <ambientLight intensity={0.1} />
 
           <Sun selected={selected === "Sun"} onClick={() => setSelected("Sun")} onHover={setHovered} />
 
           {planets.map((p) => (
-            <Planet key={p.name} d={p} selected={selected === p.name} hovered={hovered === p.name} refDf={refDf} showGrid={showGrid} onClick={() => setSelected(p.name)} onHover={setHovered} />
+            <Planet key={p.name} d={p} selected={selected === p.name} hovered={hovered === p.name} refDf={refDf} showGrid={showGrid} showMoons={showMoons} onClick={() => setSelected(p.name)} onHover={setHovered} />
           ))}
 
-          {planets.map((p) => (
-            <OrbitRing key={`o-${p.name}`} r={p.au * AU} active={selected === p.name} />
+          {showOrbits && planets.map((p) => (
+            <OrbitRing key={`o-${p.name}`} r={p.au * AU} incl={p.incl} active={selected === p.name} />
           ))}
 
-          <DreiStars radius={100} depth={80} count={4000} factor={3} saturation={0.1} fade speed={0.5} />
+          <DreiStars radius={200} depth={150} count={5000} factor={3} saturation={0.1} fade speed={0.5} />
 
           <EffectComposer>
             <Bloom luminanceThreshold={0.4} luminanceSmoothing={0.9} intensity={0.8} mipmapBlur />
             <Vignette eskil={false} offset={0.2} darkness={0.7} />
           </EffectComposer>
 
-          <OrbitControls enablePan maxDistance={80} minDistance={3} enableDamping dampingFactor={0.05} />
+          <OrbitControls enablePan maxDistance={200} minDistance={2} enableDamping dampingFactor={0.05} />
         </Canvas>
       </div>
 
@@ -263,16 +140,30 @@ export function SolarSystemView() {
             <div style={S.infoD}>
               <Row l="d\u03C4/dt" v={`1 - ${(1 - selP.df).toExponential(3)}`} />
               <Row l="Lost/year" v={fmt(selP.lost)} />
-              <Row l="Orbit" v={`${selP.au.toFixed(3)} AU  |  ${selP.period.toFixed(2)} yr`} />
+              <Row l="Orbit" v={`${selP.au.toFixed(3)} AU | ${selP.period.toFixed(2)} yr`} />
+              <Row l="Inclination" v={`${selP.incl.toFixed(2)}\u00B0`} />
               <Row l="Time zones" v={getTimeZoneCount(selP.name).toString()} />
+              {MOONS.filter((m) => m[1] === selP.name).length > 0 && (
+                <Row l="Moons" v={MOONS.filter((m) => m[1] === selP.name).map((m) => m[0]).join(", ")} />
+              )}
             </div>
           ) : null}
         </div>
 
-        <label style={S.toggle}>
-          <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
-          <span>Time Zone Grid</span>
-        </label>
+        <div style={S.toggles}>
+          <label style={S.toggle}>
+            <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
+            <span>Time Zone Grid</span>
+          </label>
+          <label style={S.toggle}>
+            <input type="checkbox" checked={showMoons} onChange={(e) => setShowMoons(e.target.checked)} />
+            <span>Moons</span>
+          </label>
+          <label style={S.toggle}>
+            <input type="checkbox" checked={showOrbits} onChange={(e) => setShowOrbits(e.target.checked)} />
+            <span>Orbital Planes</span>
+          </label>
+        </div>
 
         <div style={S.comp}>
           <div style={S.compHdr}>Differential Aging vs {selected}</div>
@@ -298,6 +189,7 @@ export function SolarSystemView() {
 function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () => void; onHover: (n: string | null) => void }) {
   const ref = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Mesh>(null);
+  const sunTex = useLoader(THREE.TextureLoader, `${BASE}textures/sun.jpg`);
 
   useFrame((_, dt) => {
     if (ref.current) ref.current.rotation.y += dt * 0.05;
@@ -308,7 +200,7 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
     <group>
       <mesh ref={ref} onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onClick(); }} onPointerEnter={() => onHover("Sun")} onPointerLeave={() => onHover(null)}>
         <sphereGeometry args={[SUN_R, 48, 48]} />
-        <meshBasicMaterial color="#ffd54f" />
+        <meshBasicMaterial map={sunTex} />
       </mesh>
       <mesh ref={glowRef}>
         <sphereGeometry args={[SUN_R * 1.3, 32, 32]} />
@@ -318,7 +210,7 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
         <sphereGeometry args={[SUN_R * 1.8, 32, 32]} />
         <meshBasicMaterial color="#ff6f00" transparent opacity={0.04} />
       </mesh>
-      <pointLight position={[0, 0, 0]} intensity={3} color="#fff3e0" distance={100} decay={1.5} />
+      <pointLight position={[0, 0, 0]} intensity={3} color="#fff3e0" distance={200} decay={1.5} />
       {selected && (
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <ringGeometry args={[SUN_R * 1.5, SUN_R * 1.6, 48]} />
@@ -329,28 +221,24 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
   );
 }
 
-// ─── Planet with procedural shader + grid ──────────────────────────────────
+// ─── Planet with texture + grid + moons ────────────────────────────────────
 
-function Planet({ d, selected, hovered, refDf, showGrid, onClick, onHover }: {
-  d: PData; selected: boolean; hovered: boolean; refDf: number; showGrid: boolean;
+function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onHover }: {
+  d: PData; selected: boolean; hovered: boolean; refDf: number; showGrid: boolean; showMoons: boolean;
   onClick: () => void; onHover: (n: string | null) => void;
 }) {
   const gRef = useRef<THREE.Group>(null);
-  const matRef = useRef<THREE.ShaderMaterial>(null);
+  const mRef = useRef<THREE.Mesh>(null);
   const orbR = d.au * AU;
   const sz = Math.max(d.rKm * PLANET_SCALE, MIN_R);
   const ddiff = d.df - refDf;
   const dColor = ddiff > 0 ? "#34d399" : "#f87171";
   const tzCount = getTimeZoneCount(d.name);
+  const inclRad = (d.incl * Math.PI) / 180;
 
-  const planetMat = useMemo(() => new THREE.ShaderMaterial({
-    vertexShader: planetVertexShader(),
-    fragmentShader: planetFragmentShader(d.name),
-    uniforms: {
-      uTime: { value: 0 },
-      uSunDir: { value: new THREE.Vector3(1, 0, 0) },
-    },
-  }), [d.name]);
+  const tex = useLoader(THREE.TextureLoader, `${BASE}textures/${d.texture}`);
+  // Night lights texture always loaded (hook rules), only used for Earth
+  const nightTex = useLoader(THREE.TextureLoader, d.name === "Earth" ? `${BASE}textures/earth_night.jpg` : `${BASE}textures/${d.texture}`);
 
   const gridMat = useMemo(() => new THREE.ShaderMaterial({
     vertexShader: gridVertexShader,
@@ -359,73 +247,81 @@ function Planet({ d, selected, hovered, refDf, showGrid, onClick, onHover }: {
       uTimeZones: { value: tzCount },
       uGridColor: { value: new THREE.Color(d.name === "Earth" ? "#60a5fa" : d.name === "Mars" ? "#ff6b35" : "#ffffff") },
     },
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
   }), [d.name, tzCount]);
+
+  const moons = useMemo(() => MOONS.filter((m) => m[1] === d.name), [d.name]);
 
   useFrame(({ clock }) => {
     if (gRef.current) {
       const a = (clock.getElapsedTime() * TIME_SPEED) / d.period + d.au * 1.5;
       gRef.current.position.x = Math.cos(a) * orbR;
+      gRef.current.position.y = Math.sin(a) * Math.sin(inclRad) * orbR * 0.05; // subtle vertical offset from inclination
       gRef.current.position.z = Math.sin(a) * orbR;
-
-      // Update sun direction for day/night
-      const worldPos = new THREE.Vector3();
-      gRef.current.getWorldPosition(worldPos);
-      const sunDir = worldPos.negate().normalize();
-      planetMat.uniforms.uSunDir.value.copy(sunDir);
     }
-    planetMat.uniforms.uTime.value = clock.getElapsedTime();
+    if (mRef.current) mRef.current.rotation.y += 0.008;
   });
 
   return (
     <group ref={gRef}>
-      {/* Planet body with procedural shader */}
-      <mesh
+      {/* Planet body with NASA texture */}
+      <mesh ref={mRef}
         onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onClick(); }}
         onPointerEnter={() => onHover(d.name)}
         onPointerLeave={() => onHover(null)}
       >
         <sphereGeometry args={[sz, 64, 64]} />
-        <primitive object={planetMat} attach="material" />
+        <meshStandardMaterial
+          map={tex}
+          roughness={0.8}
+          metalness={0.05}
+          emissive={selected || hovered ? d.color : "#000"}
+          emissiveIntensity={selected ? 0.3 : hovered ? 0.15 : 0}
+        />
       </mesh>
+
+      {/* Earth night lights layer */}
+      {d.name === "Earth" && (
+        <mesh rotation={[0, Math.PI, 0]}>
+          <sphereGeometry args={[sz * 1.001, 64, 64]} />
+          <meshBasicMaterial map={nightTex} transparent opacity={0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
+        </mesh>
+      )}
 
       {/* Time zone grid overlay */}
       {showGrid && (
         <mesh>
-          <sphereGeometry args={[sz * 1.002, 64, 64]} />
+          <sphereGeometry args={[sz * 1.003, 64, 64]} />
           <primitive object={gridMat} attach="material" />
         </mesh>
       )}
 
-      {/* Atmosphere glow */}
+      {/* Atmosphere */}
       <mesh>
         <sphereGeometry args={[sz * (d.name === "Venus" ? 1.12 : 1.06), 32, 32]} />
         <meshBasicMaterial
           color={d.name === "Earth" ? "#4a90d9" : d.name === "Venus" ? "#e8c87a" : d.name === "Mars" ? "#c1440e" : d.color}
-          transparent
-          opacity={d.name === "Venus" ? 0.15 : d.name === "Earth" ? 0.08 : 0.04}
+          transparent opacity={d.name === "Venus" ? 0.15 : d.name === "Earth" ? 0.08 : 0.04}
           side={THREE.BackSide}
         />
       </mesh>
 
-      {/* Saturn rings with bands */}
+      {/* Saturn rings */}
       {d.rings && (
         <group rotation={[Math.PI * 0.45, 0, 0]}>
           {[0, 1, 2, 3].map((i) => (
             <mesh key={i}>
               <ringGeometry args={[sz * (1.3 + i * 0.22), sz * (1.5 + i * 0.22), 128]} />
-              <meshBasicMaterial
-                color={i % 2 === 0 ? "#d4b87a" : "#c8a87a"}
-                transparent
-                opacity={0.35 - i * 0.05}
-                side={THREE.DoubleSide}
-              />
+              <meshBasicMaterial color={i % 2 === 0 ? "#d4b87a" : "#c0a070"} transparent opacity={0.35 - i * 0.05} side={THREE.DoubleSide} />
             </mesh>
           ))}
         </group>
       )}
+
+      {/* Moons */}
+      {showMoons && moons.map(([mName, _, mOrbit, mRad, mColor]) => (
+        <MoonBody key={mName} name={mName} orbitR={mOrbit} radius={mRad} color={mColor} parentR={sz} />
+      ))}
 
       {/* Selection ring */}
       {selected && (
@@ -435,23 +331,17 @@ function Planet({ d, selected, hovered, refDf, showGrid, onClick, onHover }: {
         </mesh>
       )}
 
-      {/* Hover/selection highlight */}
-      {(selected || hovered) && (
-        <mesh>
-          <sphereGeometry args={[sz * 1.01, 32, 32]} />
-          <meshBasicMaterial color={d.color} transparent opacity={selected ? 0.08 : 0.04} />
-        </mesh>
-      )}
-
       {/* Label */}
       {(selected || hovered) && (
-        <Html position={[0, sz + 0.35, 0]} center style={{ pointerEvents: "none" }}>
-          <div style={{ color: "#f1f5f9", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(15,23,42,0.85)", padding: "3px 8px", borderRadius: "4px", border: `1px solid ${d.color}50`, backdropFilter: "blur(4px)", whiteSpace: "nowrap" }}>
-            <div style={{ fontWeight: 700, marginBottom: "1px" }}>{d.name}</div>
+        <Html position={[0, sz + 0.4, 0]} center style={{ pointerEvents: "none" }}>
+          <div style={{ color: "#f1f5f9", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(15,23,42,0.85)", padding: "4px 10px", borderRadius: "4px", border: `1px solid ${d.color}50`, backdropFilter: "blur(4px)", whiteSpace: "nowrap" }}>
+            <div style={{ fontWeight: 700, marginBottom: "2px" }}>{d.name}</div>
             <div style={{ color: dColor, fontSize: "10px" }}>
               {ddiff >= 0 ? "+" : ""}{(ddiff * 86400 * 1e6).toFixed(2)} {"\u03BCs/day"}
             </div>
-            {showGrid && <div style={{ color: "#64748b", fontSize: "9px" }}>{tzCount} time zones</div>}
+            <div style={{ color: "#64748b", fontSize: "9px" }}>
+              {d.incl.toFixed(1)}{"\u00B0"} incl{showMoons && moons.length > 0 ? ` | ${moons.length} moon${moons.length > 1 ? "s" : ""}` : ""}
+            </div>
           </div>
         </Html>
       )}
@@ -459,37 +349,84 @@ function Planet({ d, selected, hovered, refDf, showGrid, onClick, onHover }: {
   );
 }
 
+// ─── Moon ───────────────────────────────────────────────────────────────────
+
+function MoonBody({ name, orbitR, radius, color, parentR }: { name: string; orbitR: number; radius: number; color: string; parentR: number }) {
+  const ref = useRef<THREE.Group>(null);
+  const moonR = Math.max(radius * MOON_SIZE_SCALE, MIN_MOON_R);
+  const orbitSceneR = Math.max(orbitR * MOON_ORBIT_SCALE + parentR * 1.3, parentR + MIN_MOON_ORBIT);
+
+  const moonTex = useLoader(THREE.TextureLoader, name === "Moon" ? `${BASE}textures/moon.jpg` : `${BASE}textures/mercury.jpg`);
+
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      const speed = 2 + Math.random() * 0.01; // slightly varied for visual interest
+      const t = clock.getElapsedTime() * speed / (orbitR / 100000);
+      ref.current.position.x = Math.cos(t) * orbitSceneR;
+      ref.current.position.z = Math.sin(t) * orbitSceneR;
+      ref.current.position.y = Math.sin(t * 0.7) * orbitSceneR * 0.1;
+    }
+  });
+
+  return (
+    <group>
+      {/* Moon orbit */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[orbitSceneR - 0.005, orbitSceneR + 0.005, 64]} />
+        <meshBasicMaterial color="#334155" transparent opacity={0.15} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Moon body */}
+      <group ref={ref}>
+        <mesh>
+          <sphereGeometry args={[moonR, 16, 16]} />
+          <meshStandardMaterial map={name === "Moon" ? moonTex : undefined} color={name === "Moon" ? undefined : color} roughness={0.9} metalness={0.05} emissive={color} emissiveIntensity={0.05} />
+        </mesh>
+        <Html position={[0, moonR + 0.08, 0]} center style={{ pointerEvents: "none" }}>
+          <div style={{ color: "#64748b", fontSize: "7px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{name}</div>
+        </Html>
+      </group>
+    </group>
+  );
+}
+
+// ─── Orbit Ring with inclination ───────────────────────────────────────────
+
+function OrbitRing({ r, incl, active }: { r: number; incl: number; active: boolean }) {
+  const inclRad = (incl * Math.PI) / 180;
+  const pts = useMemo(() => {
+    const p: THREE.Vector3[] = [];
+    for (let i = 0; i <= 128; i++) {
+      const a = (i / 128) * Math.PI * 2;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const y = Math.sin(a) * Math.sin(inclRad) * r * 0.05;
+      p.push(new THREE.Vector3(x, y, z));
+    }
+    return p;
+  }, [r, inclRad]);
+
+  return <Line points={pts} color={active ? "#60a5fa" : "#1e293b"} lineWidth={active ? 1.2 : 0.4} transparent opacity={active ? 0.5 : 0.15} />;
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function getTimeZoneCount(name: string): number {
   switch (name) {
     case "Earth": return 24;
-    case "Mars": return 24; // MTC uses 24 Martian hours
+    case "Mars": return 24;
     case "Jupiter": return 12;
     case "Saturn": return 12;
-    case "Venus": return 1; // extremely slow rotation
+    case "Venus": return 1;
     case "Mercury": return 6;
     default: return 12;
   }
-}
-
-function OrbitRing({ r, active }: { r: number; active: boolean }) {
-  const pts = useMemo(() => {
-    const p: THREE.Vector3[] = [];
-    for (let i = 0; i <= 128; i++) {
-      const a = (i / 128) * Math.PI * 2;
-      p.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
-    }
-    return p;
-  }, [r]);
-  return <Line points={pts} color={active ? "#60a5fa" : "#1e293b"} lineWidth={active ? 1.2 : 0.4} transparent opacity={active ? 0.5 : 0.15} />;
 }
 
 function Row({ l, v }: { l: string; v: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#94a3b8", padding: "1px 0" }}>
       <span style={{ color: "#64748b" }}>{l}</span>
-      <span style={{ fontVariantNumeric: "tabular-nums" }}>{v}</span>
+      <span style={{ fontVariantNumeric: "tabular-nums", textAlign: "right", maxWidth: "160px", overflowWrap: "break-word" }}>{v}</span>
     </div>
   );
 }
@@ -513,6 +450,7 @@ const S: Record<string, React.CSSProperties> = {
   info: { background: "#0a0f18", borderRadius: "6px", padding: "10px", border: "1px solid #1e293b30" },
   infoName: { fontSize: "16px", fontWeight: 700, color: "#f1f5f9", marginBottom: "6px" },
   infoD: { display: "flex", flexDirection: "column", gap: "2px" },
+  toggles: { display: "flex", flexDirection: "column", gap: "6px" },
   toggle: { display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#94a3b8", cursor: "pointer" },
   comp: { display: "flex", flexDirection: "column", gap: "4px" },
   compHdr: { fontSize: "11px", color: "#64748b", letterSpacing: "0.5px", marginBottom: "2px" },
