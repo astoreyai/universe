@@ -20,8 +20,8 @@ const CLOCKS = [
 
 export function ClockDashboard() {
   return (
-    <div style={styles.container}>
-      <div style={styles.canvasWrapper}>
+    <div style={styles.container} className="scene-layout">
+      <div style={styles.canvasWrapper} className="scene-canvas">
         <Canvas
           camera={{ position: [0, 3, 8], fov: 50 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
@@ -40,7 +40,7 @@ export function ClockDashboard() {
         </Canvas>
       </div>
 
-      <div style={styles.panel}>
+      <div style={styles.panel} className="scene-panel">
         <div style={styles.panelTitle}>Time Scales</div>
         <div style={styles.subtitle}>Multi-frame temporal reference system</div>
         <ClockList />

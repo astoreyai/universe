@@ -53,8 +53,8 @@ export function SolarSystemView() {
   const refDf = selP?.df ?? (selected === "Sun" ? sunD?.dilation_factor ?? 1 : 1);
 
   return (
-    <div style={S.container}>
-      <div style={S.canvas}>
+    <div style={S.container} className="scene-layout">
+      <div style={S.canvas} className="scene-canvas">
         <Canvas camera={{ position: [0, 18, 25], fov: 45 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }} style={{ background: "#020208" }}>
           <color attach="background" args={["#020208"]} />
           <ambientLight intensity={0.08} />
@@ -80,7 +80,7 @@ export function SolarSystemView() {
         </Canvas>
       </div>
 
-      <div style={S.panel} data-testid="solar-system-panel">
+      <div style={S.panel} className="scene-panel" data-testid="solar-system-panel">
         <div style={S.panelHdr}>Observer Frame</div>
 
         <div style={S.btns}>
