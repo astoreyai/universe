@@ -1,0 +1,7 @@
+target/
+node_modules/
+dist/
+web/src/wasm-pkg/
+*.wasm
+.vite/
+test-results/

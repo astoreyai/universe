@@ -1,0 +1,859 @@
+import React, { useRef, useMemo, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Html, Stars as DreiStars } from "@react-three/drei";
+import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
+import * as THREE from "three";
+import { engine } from "../engine/wasm-bridge";
+
+// ─── Coordinate mapping ────────────────────────────────────────────────────
+
+const SCENE_HEIGHT = 14; // scene units, ~1 unit per Gyr
+const AGE_NOW = 13.8; // Gyr (approximate, exact from engine)
+const R_K = 3; // asinh radial scale
+const R_L = 5; // asinh reference distance (Gly)
+
+function cosmicTimeToY(ageGyr: number): number {
+  return (ageGyr / AGE_NOW) * SCENE_HEIGHT;
+}
+
+function comovingToSceneR(distGly: number): number {
+  return R_K * Math.asinh(distGly / R_L);
+}
+
+// ─── Milestones ────────────────────────────────────────────────────────────
+
+const MILESTONES = [
+  { z: 1100, label: "CMB / Last Scattering", color: "#ef4444", short: "CMB" },
+  { z: 20, label: "First Stars", color: "#f97316", short: "Stars" },
+  { z: 10, label: "Cosmic Dawn", color: "#fbbf24", short: "Dawn" },
+  { z: 2, label: "Peak Star Formation", color: "#34d399", short: "Peak SF" },
+  { z: 0, label: "Present Day", color: "#60a5fa", short: "Now" },
+];
+
+function describeRedshift(z: number): string {
+  if (z <= 0.01) return "Local universe";
+  if (z <= 0.1) return "Nearby galaxies";
+  if (z <= 0.5) return "Intermediate distance";
+  if (z <= 1) return "Half current universe size";
+  if (z <= 2) return "Peak star formation era";
+  if (z <= 5) return "Early galaxies forming";
+  if (z <= 10) return "Cosmic dawn / reionization";
+  if (z <= 100) return "Dark ages";
+  return "Last scattering (CMB)";
+}
+
+// ─── Age-to-redshift lookup table ──────────────────────────────────────────
+
+interface LookupEntry {
+  age: number;
+  z: number;
+}
+
+function buildAgeLookup(): LookupEntry[] {
+  const table: LookupEntry[] = [];
+  for (let i = 0; i <= 500; i++) {
+    const z = Math.max(Math.pow(10, (i / 500) * 3.04) - 1, 0);
+    const age = engine.ageAtRedshiftGyr(z);
+    table.push({ age, z });
+  }
+  return table.sort((a, b) => a.age - b.age);
+}
+
+function ageToRedshift(table: LookupEntry[], ageGyr: number): number {
+  if (ageGyr <= table[0].age) return table[0].z;
+  if (ageGyr >= table[table.length - 1].age) return 0;
+  let lo = 0,
+    hi = table.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (table[mid].age < ageGyr) lo = mid;
+    else hi = mid;
+  }
+  const frac = (ageGyr - table[lo].age) / (table[hi].age - table[lo].age);
+  return table[lo].z + frac * (table[hi].z - table[lo].z);
+}
+
+// ─── Main component ────────────────────────────────────────────────────────
+
+export function CosmicTimelineView() {
+  const [epochAge, setEpochAge] = useState(6.9); // Gyr — default to z~1
+  const [showHubble, setShowHubble] = useState(false);
+  const [showParticles, setShowParticles] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
+
+  const ageLookup = useMemo(() => buildAgeLookup(), []);
+  const ageNow = useMemo(() => engine.ageOfUniverseGyr(), []);
+
+  const sliceZ = useMemo(() => ageToRedshift(ageLookup, epochAge), [ageLookup, epochAge]);
+  const sliceData = useMemo(
+    () => ({
+      z: sliceZ,
+      a: engine.scaleFactorFromRedshift(sliceZ),
+      age: epochAge,
+      hubble: engine.hubbleParameterKmSMpc(sliceZ),
+      comoving: engine.comovingDistanceGly(sliceZ),
+      dilation: engine.cosmologicalDilation(sliceZ),
+      lookback: engine.lookbackTimeGyr(sliceZ),
+    }),
+    [sliceZ, epochAge]
+  );
+
+  // Log slider: maps 0..1 → 0.001..ageNow Gyr
+  const sliderToAge = (v: number) => Math.pow(10, v * (Math.log10(ageNow) - Math.log10(0.001)) + Math.log10(0.001));
+  const ageToSlider = (age: number) =>
+    (Math.log10(Math.max(age, 0.001)) - Math.log10(0.001)) / (Math.log10(ageNow) - Math.log10(0.001));
+
+  // Milestones table
+  const milestones = useMemo(
+    () =>
+      [0.01, 0.1, 0.5, 1, 2, 5, 10, 100, 1100].map((z) => ({
+        z,
+        a: (1 / (1 + z)).toFixed(4),
+        dilation: engine.cosmologicalDilation(z),
+        lookback: engine.lookbackTimeGyr(z),
+        comoving: engine.comovingDistanceGly(z),
+      })),
+    []
+  );
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.canvasWrapper}>
+        <Canvas
+          camera={{ position: [0, 7, 18], fov: 50 }}
+          gl={{
+            antialias: true,
+            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 1.0,
+          }}
+          style={{ background: "#010108" }}
+        >
+          <color attach="background" args={["#010108"]} />
+          <ambientLight intensity={0.03} />
+          <CosmicScene
+            epochAge={epochAge}
+            sliceZ={sliceZ}
+            showHubble={showHubble}
+            showParticles={showParticles}
+            showLabels={showLabels}
+          />
+          <DreiStars radius={80} depth={60} count={3500} factor={3} saturation={0.05} fade speed={0.4} />
+          <EffectComposer>
+            <Bloom luminanceThreshold={0.3} luminanceSmoothing={0.9} intensity={1.0} mipmapBlur />
+            <Vignette eskil={false} offset={0.15} darkness={0.75} />
+          </EffectComposer>
+          <OrbitControls enablePan maxDistance={50} minDistance={3} enableDamping dampingFactor={0.05} />
+        </Canvas>
+      </div>
+
+      <div style={styles.panel} data-testid="cosmic-panel">
+        <div style={styles.panelTitle}>Cosmic Timeline</div>
+
+        {/* Epoch slider */}
+        <div style={styles.sliderSection}>
+          <div style={styles.sliderHeader}>
+            <span style={styles.sliderLabel}>Epoch Slice</span>
+            <span style={styles.sliderValue}>{epochAge.toFixed(2)} Gyr</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.002"
+            value={ageToSlider(epochAge)}
+            onChange={(e) => setEpochAge(sliderToAge(parseFloat(e.target.value)))}
+            style={styles.sliderInput}
+            data-testid="epoch-slider"
+          />
+          <div style={styles.sliderTicks}>
+            <span>Big Bang</span>
+            <span>Now</span>
+          </div>
+        </div>
+
+        {/* Epoch readout */}
+        <div style={styles.results} data-testid="epoch-readout">
+          <div style={styles.resultRow}>
+            <span>Redshift z</span>
+            <span style={{ color: "#f59e0b" }}>{sliceData.z < 100 ? sliceData.z.toFixed(2) : sliceData.z.toFixed(0)}</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>Scale factor a</span>
+            <span>{sliceData.a.toFixed(4)}</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>Cosmic age</span>
+            <span>{sliceData.age.toFixed(2)} Gyr</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>H(z)</span>
+            <span>{sliceData.hubble.toFixed(1)} km/s/Mpc</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>Comoving radius</span>
+            <span>{sliceData.comoving.toFixed(2)} Gly</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>Time dilation</span>
+            <span>{sliceData.dilation.toFixed(2)}{"\u00D7"}</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>Lookback time</span>
+            <span>{sliceData.lookback.toFixed(2)} Gyr</span>
+          </div>
+          <div style={{ ...styles.resultRow, color: "#64748b", fontSize: "10px", marginTop: "4px" }}>
+            {describeRedshift(sliceData.z)}
+          </div>
+        </div>
+
+        {/* ΛCDM parameters */}
+        <div style={styles.paramSection}>
+          <div style={styles.paramTitle}>{"\u039B"}CDM Parameters</div>
+          <div style={styles.resultRow}>
+            <span>Age</span>
+            <span>{ageNow.toFixed(2)} Gyr</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>H{"\u2080"}</span>
+            <span>67.4 km/s/Mpc</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>{"\u03A9"}{"\u2098"}</span>
+            <span>0.315</span>
+          </div>
+          <div style={styles.resultRow}>
+            <span>{"\u03A9"}{"\u039B"}</span>
+            <span>0.685</span>
+          </div>
+        </div>
+
+        {/* View toggles */}
+        <div style={styles.toggleSection}>
+          <label style={styles.toggleLabel}>
+            <input type="checkbox" checked={showHubble} onChange={(e) => setShowHubble(e.target.checked)} />
+            <span>Hubble Sphere</span>
+          </label>
+          <label style={styles.toggleLabel}>
+            <input type="checkbox" checked={showParticles} onChange={(e) => setShowParticles(e.target.checked)} />
+            <span>Particle Field</span>
+          </label>
+          <label style={styles.toggleLabel}>
+            <input type="checkbox" checked={showLabels} onChange={(e) => setShowLabels(e.target.checked)} />
+            <span>Milestone Labels</span>
+          </label>
+        </div>
+
+        {/* Milestones table */}
+        <div style={styles.tableSection}>
+          <div style={styles.paramTitle}>Redshift Milestones</div>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>z</th>
+                <th style={styles.th}>a</th>
+                <th style={styles.th}>Lookback</th>
+                <th style={styles.th}>d(Gly)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {milestones.map((m) => (
+                <tr key={m.z}>
+                  <td style={styles.td}>{m.z}</td>
+                  <td style={styles.tdMono}>{m.a}</td>
+                  <td style={styles.tdMono}>{m.lookback.toFixed(1)}</td>
+                  <td style={styles.tdMono}>{m.comoving.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* FLRW metric */}
+        <div style={styles.flrwCard}>
+          <div style={styles.flrwTitle}>FLRW Metric</div>
+          <div style={styles.flrwEq}>
+            ds{"\u00B2"} = -c{"\u00B2"}dt{"\u00B2"} + a(t){"\u00B2"}[dr{"\u00B2"} + r{"\u00B2"}d{"\u03A9"}{"\u00B2"}]
+          </div>
+          <div style={styles.flrwDetail}>
+            {"\u0394"}t_obs = (1+z) {"\u00D7"} {"\u0394"}t_emit | H(z) = H{"\u2080"}{"\u221A"}({"\u03A9"}_m(1+z){"\u00B3"} + {"\u03A9"}_{"\u039B"})
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 3D Scene ──────────────────────────────────────────────────────────────
+
+function CosmicScene({
+  epochAge,
+  sliceZ,
+  showHubble,
+  showParticles,
+  showLabels,
+}: {
+  epochAge: number;
+  sliceZ: number;
+  showHubble: boolean;
+  showParticles: boolean;
+  showLabels: boolean;
+}) {
+  return (
+    <group>
+      <LightConeSurface />
+      <MilestoneRings showLabels={showLabels} />
+      <CosmicTimeAxis />
+      <EpochSlicePlane epochAge={epochAge} sliceZ={sliceZ} />
+      {showParticles && <ParticleField />}
+      {showHubble && <HubbleSphere />}
+      <ObserverMarker />
+    </group>
+  );
+}
+
+// ─── Light cone surface ────────────────────────────────────────────────────
+
+function LightConeSurface() {
+  const geometry = useMemo(() => {
+    const N_Z = 200;
+    const N_THETA = 64;
+
+    // Sample redshifts logarithmically: z from 0 to 1100
+    const zSamples: number[] = [0];
+    for (let i = 1; i <= N_Z; i++) {
+      const z = Math.pow(10, (i / N_Z) * 3.04) - 1;
+      zSamples.push(z);
+    }
+
+    // Compute ring positions from engine
+    const rings = zSamples.map((z) => ({
+      y: cosmicTimeToY(engine.ageAtRedshiftGyr(z)),
+      r: comovingToSceneR(engine.comovingDistanceGly(z)),
+    }));
+
+    const vCount = (N_Z + 1) * (N_THETA + 1);
+    const positions = new Float32Array(vCount * 3);
+
+    for (let i = 0; i <= N_Z; i++) {
+      for (let j = 0; j <= N_THETA; j++) {
+        const idx = (i * (N_THETA + 1) + j) * 3;
+        const angle = (j / N_THETA) * Math.PI * 2;
+        positions[idx] = rings[i].r * Math.cos(angle);
+        positions[idx + 1] = rings[i].y;
+        positions[idx + 2] = rings[i].r * Math.sin(angle);
+      }
+    }
+
+    const indices: number[] = [];
+    for (let i = 0; i < N_Z; i++) {
+      for (let j = 0; j < N_THETA; j++) {
+        const a = i * (N_THETA + 1) + j;
+        const b = a + N_THETA + 1;
+        indices.push(a, b, a + 1);
+        indices.push(a + 1, b, b + 1);
+      }
+    }
+
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geom.setIndex(indices);
+    geom.computeVertexNormals();
+    return geom;
+  }, []);
+
+  return (
+    <group>
+      {/* Translucent surface */}
+      <mesh geometry={geometry}>
+        <meshBasicMaterial
+          color="#60a5fa"
+          transparent
+          opacity={0.06}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Wireframe overlay */}
+      <lineSegments>
+        <wireframeGeometry args={[geometry]} />
+        <lineBasicMaterial color="#60a5fa" transparent opacity={0.08} />
+      </lineSegments>
+    </group>
+  );
+}
+
+// ─── Milestone rings ───────────────────────────────────────────────────────
+
+function MilestoneRings({ showLabels }: { showLabels: boolean }) {
+  const rings = useMemo(
+    () =>
+      MILESTONES.map((m) => {
+        const age = engine.ageAtRedshiftGyr(m.z);
+        const y = cosmicTimeToY(age);
+        const cDist = engine.comovingDistanceGly(m.z);
+        const r = comovingToSceneR(cDist);
+        return { ...m, y, r, age };
+      }),
+    []
+  );
+
+  return (
+    <group>
+      {rings.map((m) => (
+        <group key={m.z}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, m.y, 0]}>
+            <ringGeometry args={[Math.max(m.r - 0.04, 0), m.r + 0.04, 128]} />
+            <meshBasicMaterial
+              color={m.color}
+              transparent
+              opacity={0.5}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          {showLabels && m.r > 0.1 && (
+            <Html
+              position={[m.r + 0.3, m.y, 0]}
+              center
+              style={{ pointerEvents: "none" }}
+            >
+              <div
+                style={{
+                  color: m.color,
+                  fontSize: "9px",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  background: "rgba(1,1,8,0.85)",
+                  padding: "2px 6px",
+                  borderRadius: "3px",
+                  whiteSpace: "nowrap",
+                  border: `1px solid ${m.color}30`,
+                }}
+              >
+                {m.label} (z={m.z})
+              </div>
+            </Html>
+          )}
+          {/* Present day label at center */}
+          {showLabels && m.z === 0 && (
+            <Html
+              position={[0.6, m.y, 0]}
+              center
+              style={{ pointerEvents: "none" }}
+            >
+              <div
+                style={{
+                  color: m.color,
+                  fontSize: "9px",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  background: "rgba(1,1,8,0.85)",
+                  padding: "2px 6px",
+                  borderRadius: "3px",
+                  whiteSpace: "nowrap",
+                  border: `1px solid ${m.color}30`,
+                }}
+              >
+                Present Day (z=0)
+              </div>
+            </Html>
+          )}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ─── Time axis ─────────────────────────────────────────────────────────────
+
+function CosmicTimeAxis() {
+  const ticks = useMemo(() => {
+    const t = [
+      { age: 0, label: "Big Bang" },
+      { age: 1, label: "1 Gyr" },
+      { age: 5, label: "5 Gyr" },
+      { age: 9.2, label: "9.2 Gyr" },
+      { age: 13.8, label: "Now" },
+    ];
+    return t.map((tick) => ({
+      ...tick,
+      y: cosmicTimeToY(tick.age),
+    }));
+  }, []);
+
+  return (
+    <group position={[-0.5, 0, 0]}>
+      {/* Vertical axis line */}
+      <group position={[0, SCENE_HEIGHT / 2, 0]}>
+        <mesh>
+          <cylinderGeometry args={[0.015, 0.015, SCENE_HEIGHT, 8]} />
+          <meshBasicMaterial color="#334155" />
+        </mesh>
+      </group>
+      {/* Tick marks */}
+      {ticks.map((tick) => (
+        <group key={tick.age} position={[0, tick.y, 0]}>
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.01, 0.01, 0.15, 4]} />
+            <meshBasicMaterial color="#475569" />
+          </mesh>
+          <Html
+            position={[-0.5, 0, 0]}
+            center
+            style={{ pointerEvents: "none" }}
+          >
+            <div
+              style={{
+                color: "#64748b",
+                fontSize: "8px",
+                fontFamily: "'JetBrains Mono', monospace",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {tick.label}
+            </div>
+          </Html>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ─── Epoch slice plane ─────────────────────────────────────────────────────
+
+function EpochSlicePlane({ epochAge, sliceZ }: { epochAge: number; sliceZ: number }) {
+  const sliceY = cosmicTimeToY(epochAge);
+  const cDist = engine.comovingDistanceGly(sliceZ);
+  const sliceR = comovingToSceneR(cDist);
+
+  return (
+    <group>
+      {/* Translucent disc */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, sliceY, 0]}>
+        <circleGeometry args={[Math.max(sliceR, 0.1), 64]} />
+        <meshBasicMaterial
+          color="#f59e0b"
+          transparent
+          opacity={0.04}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Edge ring */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, sliceY, 0]}>
+        <ringGeometry args={[Math.max(sliceR - 0.03, 0), sliceR + 0.03, 128]} />
+        <meshBasicMaterial
+          color="#f59e0b"
+          transparent
+          opacity={0.4}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {/* Label */}
+      <Html
+        position={[sliceR + 0.4, sliceY, 0]}
+        center
+        style={{ pointerEvents: "none" }}
+      >
+        <div
+          style={{
+            color: "#f59e0b",
+            fontSize: "9px",
+            fontFamily: "'JetBrains Mono', monospace",
+            background: "rgba(1,1,8,0.9)",
+            padding: "2px 8px",
+            borderRadius: "3px",
+            whiteSpace: "nowrap",
+            border: "1px solid #f59e0b30",
+          }}
+        >
+          {epochAge.toFixed(1)} Gyr | z={sliceZ < 100 ? sliceZ.toFixed(1) : sliceZ.toFixed(0)}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+// ─── Particle field ────────────────────────────────────────────────────────
+
+function ParticleField() {
+  const { positions, colors } = useMemo(() => {
+    const N = 2500;
+    const pos = new Float32Array(N * 3);
+    const col = new Float32Array(N * 3);
+
+    for (let i = 0; i < N; i++) {
+      // Random cosmic age
+      const age = Math.random() * AGE_NOW;
+      const z = Math.max(Math.pow(10, Math.random() * 3.04) - 1, 0);
+      const ageAtZ = engine.ageAtRedshiftGyr(z);
+      const maxR = engine.comovingDistanceGly(z);
+      const maxSceneR = comovingToSceneR(maxR);
+
+      // Random position within the light cone at this epoch
+      const r = Math.random() * maxSceneR * 0.9;
+      const theta = Math.random() * Math.PI * 2;
+
+      pos[i * 3] = r * Math.cos(theta);
+      pos[i * 3 + 1] = cosmicTimeToY(ageAtZ);
+      pos[i * 3 + 2] = r * Math.sin(theta);
+
+      // Color: blue-purple gradient based on age
+      const t = ageAtZ / AGE_NOW;
+      col[i * 3] = 0.37 + t * 0.3; // R
+      col[i * 3 + 1] = 0.2 + t * 0.4; // G
+      col[i * 3 + 2] = 0.7 + t * 0.1; // B
+    }
+    return { positions: pos, colors: col };
+  }, []);
+
+  return (
+    <points>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+      </bufferGeometry>
+      <pointsMaterial size={0.05} vertexColors transparent opacity={0.6} sizeAttenuation />
+    </points>
+  );
+}
+
+// ─── Hubble sphere ─────────────────────────────────────────────────────────
+
+function HubbleSphere() {
+  const geometry = useMemo(() => {
+    const N = 200;
+    const profile: THREE.Vector2[] = [];
+
+    for (let i = 0; i <= N; i++) {
+      const z = Math.pow(10, (i / N) * 3.04) - 1;
+      const age = engine.ageAtRedshiftGyr(Math.max(z, 0));
+      const y = cosmicTimeToY(age);
+
+      // Hubble sphere: d_H = c / H(z) in comoving coords: d_H_comoving = c / (a * H)
+      const hSI = engine.hubbleParameterKmSMpc(Math.max(z, 0.001)) * 1000 / 3.0857e22; // km/s/Mpc → s⁻¹
+      const C_M = 299792458;
+      const SECS_PER_YR = 365.25 * 86400;
+      const dComovingM = C_M / ((1 + Math.max(z, 0)) * hSI);
+      const dComovingGly = dComovingM / (C_M * SECS_PER_YR * 1e9);
+      const r = comovingToSceneR(dComovingGly);
+
+      profile.push(new THREE.Vector2(r, y));
+    }
+
+    return new THREE.LatheGeometry(profile, 64);
+  }, []);
+
+  return (
+    <mesh geometry={geometry}>
+      <meshBasicMaterial
+        color="#06b6d4"
+        transparent
+        opacity={0.05}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
+// ─── Observer marker ───────────────────────────────────────────────────────
+
+function ObserverMarker() {
+  const ref = useRef<THREE.Mesh>(null);
+
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      const s = 1 + Math.sin(clock.getElapsedTime() * 2) * 0.15;
+      ref.current.scale.setScalar(s);
+    }
+  });
+
+  return (
+    <group position={[0, SCENE_HEIGHT, 0]}>
+      <mesh ref={ref}>
+        <sphereGeometry args={[0.12, 16, 16]} />
+        <meshBasicMaterial color="#60a5fa" />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[0.2, 16, 16]} />
+        <meshBasicMaterial color="#60a5fa" transparent opacity={0.15} />
+      </mesh>
+      <Html position={[0, 0.35, 0]} center style={{ pointerEvents: "none" }}>
+        <div
+          style={{
+            color: "#60a5fa",
+            fontSize: "9px",
+            fontFamily: "'JetBrains Mono', monospace",
+            background: "rgba(1,1,8,0.85)",
+            padding: "2px 6px",
+            borderRadius: "3px",
+            whiteSpace: "nowrap",
+            border: "1px solid #60a5fa30",
+          }}
+        >
+          Observer (Here & Now)
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+// ─── Styles ────────────────────────────────────────────────────────────────
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    display: "flex",
+    height: "calc(100vh - 130px)",
+    gap: "0",
+  },
+  canvasWrapper: {
+    flex: 1,
+    borderRadius: "8px",
+    overflow: "hidden",
+    border: "1px solid #1e293b",
+  },
+  panel: {
+    width: "280px",
+    background: "#111827",
+    border: "1px solid #1e293b",
+    borderRadius: "8px",
+    padding: "14px",
+    marginLeft: "10px",
+    overflow: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  panelTitle: {
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#94a3b8",
+    letterSpacing: "1px",
+    textTransform: "uppercase" as const,
+  },
+  sliderSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  sliderHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+  },
+  sliderLabel: {
+    fontSize: "11px",
+    color: "#94a3b8",
+    fontWeight: 600,
+  },
+  sliderValue: {
+    fontSize: "12px",
+    color: "#f59e0b",
+    fontWeight: 700,
+    fontVariantNumeric: "tabular-nums",
+  },
+  sliderInput: {
+    width: "100%",
+    accentColor: "#f59e0b",
+  },
+  sliderTicks: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: "9px",
+    color: "#475569",
+  },
+  results: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "10px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  resultRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: "11px",
+    color: "#94a3b8",
+    fontVariantNumeric: "tabular-nums",
+  },
+  paramSection: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "10px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  paramTitle: {
+    fontSize: "11px",
+    color: "#64748b",
+    letterSpacing: "0.5px",
+    marginBottom: "2px",
+    fontWeight: 600,
+  },
+  toggleSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+  },
+  toggleLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "11px",
+    color: "#94a3b8",
+    cursor: "pointer",
+  },
+  tableSection: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "8px",
+    overflow: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontSize: "10px",
+  },
+  th: {
+    textAlign: "left",
+    padding: "3px 6px",
+    borderBottom: "1px solid #1e293b",
+    color: "#64748b",
+    fontSize: "9px",
+    letterSpacing: "0.5px",
+    textTransform: "uppercase" as const,
+  },
+  td: {
+    padding: "3px 6px",
+    borderBottom: "1px solid #0f172a",
+    color: "#e2e8f0",
+  },
+  tdMono: {
+    padding: "3px 6px",
+    borderBottom: "1px solid #0f172a",
+    color: "#94a3b8",
+    fontVariantNumeric: "tabular-nums",
+  },
+  flrwCard: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "10px",
+    textAlign: "center",
+  },
+  flrwTitle: {
+    fontSize: "10px",
+    color: "#64748b",
+    letterSpacing: "1.5px",
+    textTransform: "uppercase" as const,
+    marginBottom: "4px",
+  },
+  flrwEq: {
+    fontSize: "13px",
+    color: "#a78bfa",
+    fontStyle: "italic",
+    marginBottom: "4px",
+  },
+  flrwDetail: {
+    fontSize: "10px",
+    color: "#64748b",
+  },
+};
