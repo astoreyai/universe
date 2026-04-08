@@ -118,8 +118,8 @@ export function BlackHoleView() {
   }, [mass, spin, gm, rs]);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.canvasWrapper}>
+    <div style={styles.container} className="scene-layout">
+      <div style={styles.canvasWrapper} className="scene-canvas">
         <Canvas
           camera={{ position: [0, 8, 12], fov: 50 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
@@ -143,7 +143,7 @@ export function BlackHoleView() {
         </Canvas>
       </div>
 
-      <div style={styles.panel} data-testid="blackhole-panel">
+      <div style={styles.panel} className="scene-panel" data-testid="blackhole-panel">
         <div style={styles.panelTitle}>Black Hole Parameters</div>
 
         <SliderControl

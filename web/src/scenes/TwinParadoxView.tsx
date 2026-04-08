@@ -61,8 +61,8 @@ export function TwinParadoxView() {
   }, [active.speed, active.years]);
 
   return (
-    <div style={styles.container} data-testid="twin-paradox-view">
-      <div style={styles.canvasWrapper}>
+    <div style={styles.container} className="scene-layout" data-testid="twin-paradox-view">
+      <div style={styles.canvasWrapper} className="scene-canvas">
         <Canvas
           camera={{ position: [0, 4, 14], fov: 50 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
@@ -80,7 +80,7 @@ export function TwinParadoxView() {
         </Canvas>
       </div>
 
-      <div style={styles.panel} data-testid="twin-panel">
+      <div style={styles.panel} className="scene-panel" data-testid="twin-panel">
         <div style={styles.panelTitle}>Twin Paradox Calculator</div>
         <div style={styles.subtitle}>Differential aging for relativistic travel</div>
 

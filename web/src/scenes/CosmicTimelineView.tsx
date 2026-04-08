@@ -117,8 +117,8 @@ export function CosmicTimelineView() {
   );
 
   return (
-    <div style={styles.container}>
-      <div style={styles.canvasWrapper}>
+    <div style={styles.container} className="scene-layout">
+      <div style={styles.canvasWrapper} className="scene-canvas">
         <Canvas
           camera={{ position: [0, 7, 18], fov: 50 }}
           gl={{
@@ -146,7 +146,7 @@ export function CosmicTimelineView() {
         </Canvas>
       </div>
 
-      <div style={styles.panel} data-testid="cosmic-panel">
+      <div style={styles.panel} className="scene-panel" data-testid="cosmic-panel">
         <div style={styles.panelTitle}>Cosmic Timeline</div>
 
         {/* Epoch slider */}
