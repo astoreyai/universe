@@ -1,11 +1,86 @@
-import React, { useRef, useMemo, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import React, { useRef, useMemo, useState, forwardRef } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html, Line, Stars as DreiStars } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
+import { Effect, BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { engine } from "../engine/wasm-bridge";
 
 const C2 = 299792458 * 299792458;
+
+// ─── Gravitational Lensing Post-Processing Effect ──────────────────────────
+
+const lensingFragmentShader = `
+  uniform vec2 uCenter;
+  uniform float uStrength;
+  uniform float uRadius;
+
+  void mainUv(inout vec2 uv) {
+    vec2 dir = uv - uCenter;
+    float dist = length(dir);
+    if (dist < 0.001) return;
+
+    // Einstein ring deflection: angle ~ 4GM/(c²b)
+    // Simplified screen-space: deflect inversely with distance
+    float innerFade = smoothstep(uRadius * 0.15, uRadius * 0.5, dist);
+    float outerFade = 1.0 - smoothstep(0.0, uRadius, dist);
+    float deflection = uStrength / (dist * 80.0) * innerFade * outerFade;
+
+    // Tangential stretching (Einstein ring effect)
+    vec2 tangent = vec2(-dir.y, dir.x) / dist;
+    float ringPhase = sin(dist * 40.0 - 1.5) * 0.3;
+
+    uv += normalize(dir) * deflection + tangent * deflection * ringPhase * 0.3;
+  }
+`;
+
+class GravitationalLensEffect extends Effect {
+  constructor({ center = [0.5, 0.5], strength = 1.0, radius = 0.4 } = {}) {
+    super("GravitationalLensEffect", lensingFragmentShader, {
+      blendFunction: BlendFunction.NORMAL,
+      uniforms: new Map<string, THREE.Uniform>([
+        ["uCenter", new THREE.Uniform(new THREE.Vector2(center[0], center[1]))],
+        ["uStrength", new THREE.Uniform(strength)],
+        ["uRadius", new THREE.Uniform(radius)],
+      ]),
+    });
+  }
+}
+
+const GravLens = forwardRef<GravitationalLensEffect, { center?: [number, number]; strength?: number; radius?: number }>(
+  function GravLens({ center = [0.5, 0.5], strength = 1.0, radius = 0.4 }, ref) {
+    const effect = useMemo(() => new GravitationalLensEffect({ center, strength, radius }), []);
+
+    // Update uniforms when props change
+    useMemo(() => {
+      effect.uniforms.get("uCenter")!.value.set(center[0], center[1]);
+      effect.uniforms.get("uStrength")!.value = strength;
+      effect.uniforms.get("uRadius")!.value = radius;
+    }, [effect, center, strength, radius]);
+
+    return <primitive ref={ref} object={effect} dispose={null} />;
+  }
+);
+
+// Component that tracks the black hole position and updates lensing
+function LensingTracker({ mass }: { mass: number }) {
+  const { camera, size } = useThree();
+  const effectRef = useRef<GravitationalLensEffect>(null);
+  const bhPos = useMemo(() => new THREE.Vector3(0, 0, 0), []);
+  const projected = useMemo(() => new THREE.Vector3(), []);
+
+  useFrame(() => {
+    if (!effectRef.current) return;
+    projected.copy(bhPos).project(camera);
+    const cx = (projected.x + 1) / 2;
+    const cy = 1 - (projected.y + 1) / 2; // flip Y for UV space
+    effectRef.current.uniforms.get("uCenter")!.value.set(cx, cy);
+  });
+
+  const strength = Math.min(mass * 0.08, 2.0);
+
+  return <GravLens ref={effectRef} strength={strength} radius={0.5} />;
+}
 
 export function BlackHoleView() {
   const [mass, setMass] = useState(10); // solar masses
@@ -60,6 +135,7 @@ export function BlackHoleView() {
           />
           <DreiStars radius={60} depth={50} count={3000} factor={2.5} saturation={0} fade speed={0.3} />
           <EffectComposer>
+            <LensingTracker mass={mass} />
             <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={1.2} mipmapBlur />
             <Vignette eskil={false} offset={0.15} darkness={0.8} />
           </EffectComposer>

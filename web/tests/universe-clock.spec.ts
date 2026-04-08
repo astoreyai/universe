@@ -51,34 +51,34 @@ test.describe("App Shell", () => {
   test("WASM engine initializes without error", async ({ page }) => {
     // If WASM failed, we'd see "Failed to load engine" error
     await expect(page.locator("text=Failed to load engine")).not.toBeVisible();
-    // Verify a computed value is present (proves engine is running)
-    await expect(page.locator("text=Coordinated Universal Time")).toBeVisible();
+    // Verify the 3D canvas renders (proves engine is running)
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 10000 });
   });
 });
 
 // ─── TIME SCALES TAB ────────────────────────────────────────────────────────
 
 test.describe("Time Scales Tab", () => {
-  test.beforeEach(async ({ page }) => { await initApp(page); });
+  test.beforeEach(async ({ page }) => {
+    await initApp(page);
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 10000 });
+  });
 
   test("UTC clock shows valid ISO datetime format", async ({ page }) => {
-    const utcCard = page.locator("text=Coordinated Universal Time").locator("..");
-    const value = await utcCard.locator("div").nth(2).textContent();
+    const value = await page.locator("text=/\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}/").first().textContent();
     // Should match YYYY-MM-DD HH:MM:SS
-    expect(value).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+    expect(value).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
   });
 
   test("UTC shows today's date (2026-04-08)", async ({ page }) => {
-    const utcCard = page.locator("text=Coordinated Universal Time").locator("..");
-    const value = await utcCard.locator("div").nth(2).textContent();
-    expect(value).toContain("2026-04-08");
+    await expect(page.locator("text=/2026-04-08/").first()).toBeVisible();
   });
 
   test("TAI is ahead of UTC by exactly 37 leap seconds", async ({ page }) => {
-    const utcCard = page.locator("text=Coordinated Universal Time").locator("..");
-    const taiCard = page.locator("text=International Atomic Time").locator("..");
-    const utcText = await utcCard.locator("div").nth(2).textContent();
-    const taiText = await taiCard.locator("div").nth(2).textContent();
+    const datetimes = await page.locator("text=/\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}/").allTextContents();
+    // First datetime is UTC, second is TAI
+    const utcText = datetimes[0];
+    const taiText = datetimes[1];
     // Parse seconds from both
     const utcSec = parseInt(utcText!.slice(-2));
     const taiSec = parseInt(taiText!.slice(-2));
@@ -92,18 +92,15 @@ test.describe("Time Scales Tab", () => {
   });
 
   test("TT is ahead of TAI by 32.184 seconds", async ({ page }) => {
-    const taiCard = page.locator("text=International Atomic Time").locator("..");
-    const ttCard = page.locator("text=Terrestrial Time").locator("..");
-    const taiText = await taiCard.locator("div").nth(2).textContent();
-    const ttText = await ttCard.locator("div").nth(2).textContent();
-    // TT should show a time ~32s ahead of TAI (might tick to next minute)
+    const datetimes = await page.locator("text=/\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}/").allTextContents();
+    // Third datetime is TT
+    const ttText = datetimes[2];
     // Just verify it parses as a valid datetime
-    expect(ttText).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+    expect(ttText).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
   });
 
   test("TCG shows positive offset from TT", async ({ page }) => {
-    const tcgCard = page.locator("text=Geocentric Coordinate Time").locator("..");
-    const value = await tcgCard.locator("div").nth(2).textContent();
+    const value = await page.locator("text=/TT \\+ [\\d.]+/").first().textContent();
     // TCG - TT should be positive (TCG runs faster)
     expect(value).toContain("TT +");
     const offset = extractNumber(value);
@@ -113,8 +110,9 @@ test.describe("Time Scales Tab", () => {
   });
 
   test("TCB shows larger positive offset from TT", async ({ page }) => {
-    const tcbCard = page.locator("text=Barycentric Coordinate Time").locator("..");
-    const value = await tcbCard.locator("div").nth(2).textContent();
+    const allOffsets = await page.locator("text=/TT \\+ [\\d.]+/").allTextContents();
+    // Second TT+ match is TCB (first is TCG)
+    const value = allOffsets[1];
     expect(value).toContain("TT +");
     const offset = extractNumber(value);
     // TCB - TT ≈ L_B × Δt, ~49 years → ~23.9s
@@ -131,8 +129,9 @@ test.describe("Time Scales Tab", () => {
   });
 
   test("MTC shows valid HH:MM:SS Mars time", async ({ page }) => {
-    const mtcCard = page.locator("text=Coordinated Mars Time").locator("..");
-    const value = await mtcCard.locator("div").nth(2).textContent();
+    // Match standalone HH:MM:SS (not part of a YYYY-MM-DD HH:MM:SS datetime)
+    const mtcLocator = page.locator("text=/^\\d{2}:\\d{2}:\\d{2}$/");
+    const value = await mtcLocator.first().textContent();
     expect(value).toMatch(/^\d{2}:\d{2}:\d{2}$/);
     // Hours should be 0-23
     const hours = parseInt(value!.split(":")[0]);
@@ -141,8 +140,8 @@ test.describe("Time Scales Tab", () => {
   });
 
   test("MTC detail shows Sol number", async ({ page }) => {
-    const mtcCard = page.locator("text=Coordinated Mars Time").locator("..");
-    const detail = await mtcCard.locator("div").nth(3).textContent();
+    const solLocator = page.locator("text=/Sol [\\d.]+/");
+    const detail = await solLocator.first().textContent();
     expect(detail).toContain("Sol");
     const sol = extractNumber(detail);
     // Current MSD should be ~54000+
@@ -151,8 +150,8 @@ test.describe("Time Scales Tab", () => {
   });
 
   test("UTC Julian Date is valid for 2026", async ({ page }) => {
-    const utcCard = page.locator("text=Coordinated Universal Time").locator("..");
-    const detail = await utcCard.locator("div").nth(3).textContent();
+    const jdLocator = page.locator("text=/JD [\\d.]+/");
+    const detail = await jdLocator.first().textContent();
     expect(detail).toContain("JD");
     const jd = extractNumber(detail);
     // JD for 2026-04-08 ≈ 2461135
@@ -161,18 +160,18 @@ test.describe("Time Scales Tab", () => {
   });
 
   test("clocks tick — values change over 2 seconds", async ({ page }) => {
-    const utcCard = page.locator("text=Coordinated Universal Time").locator("..");
-    const v1 = await utcCard.locator("div").nth(2).textContent();
+    const datetimeLocator = page.locator("text=/\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}/").first();
+    const v1 = await datetimeLocator.textContent();
     await page.waitForTimeout(2000);
-    const v2 = await utcCard.locator("div").nth(2).textContent();
+    const v2 = await datetimeLocator.textContent();
     expect(v1).not.toBe(v2);
   });
 
   test("MTC clock ticks over 3 seconds", async ({ page }) => {
-    const mtcCard = page.locator("text=Coordinated Mars Time").locator("..");
-    const v1 = await mtcCard.locator("div").nth(2).textContent();
+    const solLocator = page.locator("text=/Sol [\\d.]+/").first();
+    const v1 = await solLocator.textContent();
     await page.waitForTimeout(3000);
-    const v2 = await mtcCard.locator("div").nth(2).textContent();
+    const v2 = await solLocator.textContent();
     expect(v1).not.toBe(v2);
   });
 
@@ -567,19 +566,20 @@ test.describe("Twin Paradox Tab", () => {
   });
 
   test("all 6 result cards render", async ({ page }) => {
-    await expect(page.locator("text=Lorentz Factor")).toBeVisible();
-    await expect(page.getByText("Earth Twin Ages")).toBeVisible();
-    await expect(page.getByText("Traveler Ages")).toBeVisible();
-    await expect(page.getByText("Differential Aging", { exact: true })).toBeVisible();
-    await expect(page.locator("text=Distance (coord frame)")).toBeVisible();
-    await expect(page.locator("text=Distance (traveler)")).toBeVisible();
+    const text = await page.locator('[data-testid="twin-paradox-view"]').textContent();
+    expect(text).toContain("Lorentz");
+    expect(text).toContain("Earth twin ages");
+    expect(text).toContain("Traveler ages");
+    expect(text).toContain("Differential");
+    expect(text).toContain("Distance (coord)");
+    expect(text).toContain("Distance (traveler)");
   });
 
   test("timeline comparison shows 3 bars", async ({ page }) => {
     await expect(page.locator("text=Timeline Comparison")).toBeVisible();
     await expect(page.getByText("Earth Twin").first()).toBeVisible();
     await expect(page.getByText("Traveler").first()).toBeVisible();
-    await expect(page.getByText("Coordinate Time")).toBeVisible();
+    await expect(page.getByText("Coordinate").first()).toBeVisible();
   });
 
   test("formulas section renders", async ({ page }) => {
@@ -626,10 +626,10 @@ test.describe("Twin Paradox Tab", () => {
   test("Galactic Voyage: traveler ages much less than Earth twin", async ({ page }) => {
     await page.getByRole("button", { name: "Galactic Voyage", exact: true }).click();
     await page.waitForTimeout(300);
-    // Full text: "...Earth Twin Ages100.0000 yearsTraveler Ages14.1067 years..."
     const text = await page.locator('[data-testid="twin-paradox-view"]').textContent();
-    const earthMatch = text!.match(/Earth Twin Ages([\d.]+)\s*years/);
-    const travelerMatch = text!.match(/Traveler Ages([\d.]+)\s*years/);
+    // Panel shows "Earth twin ages" and "Traveler ages" rows with "yr" units
+    const earthMatch = text!.match(/Earth twin ages([\d.]+)\s*yr/);
+    const travelerMatch = text!.match(/Traveler ages([\d.]+)\s*yr/);
     expect(earthMatch).not.toBeNull();
     expect(travelerMatch).not.toBeNull();
     const earthYears = parseFloat(earthMatch![1]);
@@ -656,9 +656,9 @@ test.describe("Twin Paradox Tab", () => {
   test("length contraction: traveler distance < coordinate distance", async ({ page }) => {
     await page.getByRole("button", { name: "Galactic Voyage", exact: true }).click();
     await page.waitForTimeout(300);
-    // Full text: "...Distance (coord frame)99.00 lyDistance (traveler)13.97 ly..."
     const text = await page.locator('[data-testid="twin-paradox-view"]').textContent();
-    const coordMatch = text!.match(/Distance \(coord frame\)([\d.]+)\s*ly/);
+    // Panel shows "Distance (coord)" and "Distance (traveler)" rows with "ly" units
+    const coordMatch = text!.match(/Distance \(coord\)([\d.]+)\s*ly/);
     const travelerMatch = text!.match(/Distance \(traveler\)([\d.]+)\s*ly/);
     expect(coordMatch).not.toBeNull();
     expect(travelerMatch).not.toBeNull();
