@@ -1,5 +1,5 @@
-import React, { useRef, useMemo, useState } from "react";
-import { Canvas, useFrame, useLoader, ThreeEvent } from "@react-three/fiber";
+import React, { useRef, useMemo, useState, useCallback } from "react";
+import { Canvas, useFrame, useLoader, useThree, ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Line, Html, Stars as DreiStars } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
@@ -61,13 +61,27 @@ const gridFragmentShader = `
   void main(){
     float lon=vUv.x*6.28318;
     float lat=(vUv.y-0.5)*3.14159;
+
+    // Longitude lines (time zone boundaries) — thick and bright
     float tzInt=6.28318/uTimeZones;
-    float lonLine=1.0-smoothstep(0.008,0.012,abs(mod(lon+tzInt*0.5,tzInt)-tzInt*0.5));
+    float lonLine=1.0-smoothstep(0.003,0.02,abs(mod(lon+tzInt*0.5,tzInt)-tzInt*0.5));
+
+    // Latitude lines every 30° — visible reference
     float latInt=3.14159/6.0;
-    float latLine=1.0-smoothstep(0.008,0.012,abs(mod(lat+latInt*0.5,latInt)-latInt*0.5));
-    float equator=1.0-smoothstep(0.01,0.018,abs(lat));
-    float grid=max(max(lonLine,latLine),equator)*0.4;
-    gl_FragColor=vec4(uGridColor,grid);
+    float latLine=1.0-smoothstep(0.003,0.015,abs(mod(lat+latInt*0.5,latInt)-latInt*0.5));
+
+    // Equator — thickest line
+    float equator=1.0-smoothstep(0.005,0.025,abs(lat));
+
+    // Tropics of Cancer/Capricorn (23.5°)
+    float tropicLat=23.5*3.14159/180.0;
+    float tropic=1.0-smoothstep(0.004,0.015,abs(abs(lat)-tropicLat));
+
+    // Prime meridian — slightly brighter
+    float primeMeridian=1.0-smoothstep(0.004,0.02,abs(mod(lon+3.14159,6.28318)-3.14159));
+
+    float grid=max(max(max(lonLine*0.7,latLine*0.5),max(equator*1.0,tropic*0.4)),primeMeridian*0.5);
+    gl_FragColor=vec4(uGridColor, grid);
   }
 `;
 
@@ -79,6 +93,8 @@ export function SolarSystemView() {
   const [showGrid, setShowGrid] = useState(true);
   const [showMoons, setShowMoons] = useState(true);
   const [showOrbits, setShowOrbits] = useState(true);
+  const [focused, setFocused] = useState(false); // camera focused on planet
+  const planetPositions = useRef<Record<string, THREE.Vector3>>({});
 
   const planets: PData[] = useMemo(() => {
     const dd = engine.getSolarSystemDilation();
@@ -99,10 +115,12 @@ export function SolarSystemView() {
           <color attach="background" args={["#020208"]} />
           <ambientLight intensity={0.1} />
 
-          <Sun selected={selected === "Sun"} onClick={() => setSelected("Sun")} onHover={setHovered} />
+          <CameraController selected={selected} focused={focused} planetPositions={planetPositions} />
+
+          <Sun selected={selected === "Sun"} onClick={() => { setSelected("Sun"); setFocused(true); }} onHover={setHovered} />
 
           {planets.map((p) => (
-            <Planet key={p.name} d={p} selected={selected === p.name} hovered={hovered === p.name} refDf={refDf} showGrid={showGrid} showMoons={showMoons} onClick={() => setSelected(p.name)} onHover={setHovered} />
+            <Planet key={p.name} d={p} selected={selected === p.name} hovered={hovered === p.name} refDf={refDf} showGrid={showGrid} showMoons={showMoons} planetPositions={planetPositions} onClick={() => { setSelected(p.name); setFocused(true); }} onHover={setHovered} />
           ))}
 
           {showOrbits && planets.map((p) => (
@@ -124,6 +142,12 @@ export function SolarSystemView() {
 
       <div style={S.panel} className="scene-panel" data-testid="solar-system-panel">
         <div style={S.panelHdr}>Observer Frame</div>
+
+        {focused && (
+          <button onClick={() => setFocused(false)} style={S.backBtn}>
+            {"\u2190"} Back to Overview
+          </button>
+        )}
 
         <div style={S.btns}>
           {["Sun", ...planets.map((p) => p.name)].map((n) => (
@@ -186,6 +210,48 @@ export function SolarSystemView() {
   );
 }
 
+// ─── Camera Controller — smooth focus on selected planet ───────────────────
+
+function CameraController({ selected, focused, planetPositions }: {
+  selected: string; focused: boolean;
+  planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
+}) {
+  const { camera } = useThree();
+  const targetPos = useRef(new THREE.Vector3(0, 25, 35));
+  const targetLook = useRef(new THREE.Vector3(0, 0, 0));
+
+  useFrame(() => {
+    if (focused && selected !== "Sun") {
+      const pos = planetPositions.current[selected];
+      if (pos) {
+        // Zoom distance based on planet size
+        const pData = PLANETS.find(([n]) => n === selected);
+        const sz = pData ? Math.max(pData[3] * PLANET_SCALE, MIN_R) : 0.5;
+        const zoomDist = sz * 6 + 0.8;
+
+        targetPos.current.set(pos.x + zoomDist * 0.5, pos.y + zoomDist * 0.6, pos.z + zoomDist);
+        targetLook.current.copy(pos);
+      }
+    } else if (focused && selected === "Sun") {
+      targetPos.current.set(0, 3, 5);
+      targetLook.current.set(0, 0, 0);
+    } else {
+      targetPos.current.set(0, 25, 35);
+      targetLook.current.set(0, 0, 0);
+    }
+
+    // Smooth lerp
+    camera.position.lerp(targetPos.current, 0.03);
+    const currentLook = new THREE.Vector3();
+    camera.getWorldDirection(currentLook);
+    const desiredLook = targetLook.current.clone().sub(camera.position).normalize();
+    currentLook.lerp(desiredLook, 0.05);
+    camera.lookAt(camera.position.clone().add(currentLook));
+  });
+
+  return null;
+}
+
 // ─── Sun ────────────────────────────────────────────────────────────────────
 
 function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () => void; onHover: (n: string | null) => void }) {
@@ -225,8 +291,9 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
 
 // ─── Planet with texture + grid + moons ────────────────────────────────────
 
-function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onHover }: {
+function Planet({ d, selected, hovered, refDf, showGrid, showMoons, planetPositions, onClick, onHover }: {
   d: PData; selected: boolean; hovered: boolean; refDf: number; showGrid: boolean; showMoons: boolean;
+  planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
   onClick: () => void; onHover: (n: string | null) => void;
 }) {
   const gRef = useRef<THREE.Group>(null);
@@ -258,10 +325,12 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onH
     if (gRef.current) {
       const a = (clock.getElapsedTime() * TIME_SPEED) / d.period + d.au * 1.5;
       gRef.current.position.x = Math.cos(a) * orbR;
-      gRef.current.position.y = Math.sin(a) * Math.sin(inclRad) * orbR * 0.4; // visible inclination offset
+      gRef.current.position.y = Math.sin(a) * Math.sin(inclRad) * orbR * 0.4;
       gRef.current.position.z = Math.sin(a) * orbR;
+      // Report position for camera focus
+      if (!planetPositions.current[d.name]) planetPositions.current[d.name] = new THREE.Vector3();
+      planetPositions.current[d.name].copy(gRef.current.position);
     }
-    // Axial rotation — relative to Earth day (Jupiter ~2.4x faster, Venus ~243x slower)
     if (mRef.current) mRef.current.rotation.y += 0.008 * getRotationRate(d.name);
   });
 
@@ -547,4 +616,10 @@ const S: Record<string, React.CSSProperties> = {
   comp: { display: "flex", flexDirection: "column", gap: "4px" },
   compHdr: { fontSize: "11px", color: "#64748b", letterSpacing: "0.5px", marginBottom: "2px" },
   compRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0", borderBottom: "1px solid #0a0f18" },
+  backBtn: {
+    padding: "6px 12px", border: "1px solid #3b82f6", borderRadius: "6px",
+    background: "#1e293b", color: "#60a5fa", cursor: "pointer",
+    fontSize: "11px", fontFamily: "inherit", fontWeight: 600,
+    width: "100%", textAlign: "center" as const,
+  },
 };
