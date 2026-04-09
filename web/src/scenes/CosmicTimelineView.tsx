@@ -628,10 +628,11 @@ function ParticleField() {
       const nx = Math.floor(x * 2) * 0.5;
       const nz = Math.floor(zPos * 2) * 0.5;
       const noiseVal = hash(nx + ageAtZ * 0.3, nz + ageAtZ * 0.7);
-      const clusterProb = noiseVal * noiseVal; // Bias toward clusters
 
-      // Reject particles in voids (low noise regions)
-      if (Math.random() > clusterProb * 1.5 + 0.1) continue;
+      // Accept with probability proportional to noise — high noise = filament/cluster, low = void
+      // noiseVal in [0,1], acceptance = noiseVal^0.5 (sqrt bias toward acceptance) + 0.15 base
+      const acceptProb = Math.sqrt(noiseVal) * 0.7 + 0.15;
+      if (Math.random() > acceptProb) continue;
 
       const y = cosmicTimeToY(ageAtZ);
 
