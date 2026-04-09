@@ -1,3 +1,10 @@
+/* Custom scrollbars — museum-grade panels */
+.scene-panel::-webkit-scrollbar { width: 4px; }
+.scene-panel::-webkit-scrollbar-track { background: transparent; }
+.scene-panel::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+.scene-panel::-webkit-scrollbar-thumb:hover { background: #334155; }
+.scene-panel { scrollbar-width: thin; scrollbar-color: #1e293b transparent; }
+
 /* Mobile responsive overrides */
 
 @media (max-width: 768px) {

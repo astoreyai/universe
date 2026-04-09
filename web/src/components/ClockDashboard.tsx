@@ -353,7 +353,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex", alignItems: "center", justifyContent: "center",
   },
   panel: {
-    width: "320px", background: "rgba(17,24,39,0.85)", backdropFilter: "blur(12px)",
+    width: "280px", background: "rgba(17,24,39,0.85)", backdropFilter: "blur(12px)",
     border: "1px solid #1e293b",
     borderRadius: "8px", padding: "14px", marginLeft: "10px",
     overflow: "auto", display: "flex", flexDirection: "column", gap: "10px",
