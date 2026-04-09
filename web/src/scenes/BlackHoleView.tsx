@@ -87,27 +87,41 @@ export function BlackHoleView() {
   const rs = (2 * gm) / C2;
 
   const dilation = useMemo(() => {
-    const r = observerR * rs;
-    if (spin === 0) {
-      return engine.schwarzschildDilation(gm, r);
-    } else {
-      return engine.kerrDilation(gm, spin, r, Math.PI / 2);
+    try {
+      const r = observerR * rs;
+      const d = spin === 0
+        ? engine.schwarzschildDilation(gm, r)
+        : engine.kerrDilation(gm, spin, r, Math.PI / 2);
+      return isNaN(d) ? 0 : d;
+    } catch (e) {
+      return 0;
     }
   }, [mass, spin, observerR, gm, rs]);
 
-  const secondsLost = engine.secondsLostPerYear(dilation);
+  const secondsLost = (() => {
+    try {
+      const v = engine.secondsLostPerYear(dilation);
+      return isNaN(v) ? 0 : v;
+    } catch (e) {
+      return 0;
+    }
+  })();
 
   // Dilation profile: dilation vs radius from 1.1rs to 20rs
   const profile = useMemo(() => {
     const points: { r: number; d: number }[] = [];
-    for (let i = 0; i <= 100; i++) {
-      const rRs = 1.05 + (i / 100) * 19;
-      const r = rRs * rs;
-      const d =
-        spin === 0
-          ? engine.schwarzschildDilation(gm, r)
-          : engine.kerrDilation(gm, spin, r, Math.PI / 2);
-      points.push({ r: rRs, d });
+    try {
+      for (let i = 0; i <= 100; i++) {
+        const rRs = 1.05 + (i / 100) * 19;
+        const r = rRs * rs;
+        const d =
+          spin === 0
+            ? engine.schwarzschildDilation(gm, r)
+            : engine.kerrDilation(gm, spin, r, Math.PI / 2);
+        points.push({ r: rRs, d: isNaN(d) ? 0 : d });
+      }
+    } catch (e) {
+      // Return empty profile on engine error
     }
     return points;
   }, [mass, spin, gm, rs]);
@@ -221,8 +235,8 @@ export function BlackHoleView() {
                 <text
                   x={2}
                   y={113 - v * 100}
-                  fill="#475569"
-                  fontSize={7}
+                  fill="#94a3b8"
+                  fontSize={10}
                   fontFamily="monospace"
                 >
                   {v.toFixed(2)}
@@ -247,6 +261,7 @@ export function BlackHoleView() {
               cy={110 - dilation * 100}
               r={3}
               fill="#f59e0b"
+              style={{ transition: "cx 0.3s ease, cy 0.3s ease" }}
             />
             {/* Event horizon marker */}
             <line
@@ -258,7 +273,7 @@ export function BlackHoleView() {
               strokeWidth={1}
               strokeDasharray="3,3"
             />
-            <text x={32} y={20} fill="#ef4444" fontSize={7} fontFamily="monospace">
+            <text x={32} y={20} fill="#ef4444" fontSize={10} fontFamily="monospace">
               r{"\u209b"}
             </text>
             {/* X axis labels */}
@@ -267,8 +282,8 @@ export function BlackHoleView() {
                 key={r}
                 x={30 + ((r - 1.05) / 19) * 225}
                 y={119}
-                fill="#475569"
-                fontSize={6}
+                fill="#94a3b8"
+                fontSize={10}
                 fontFamily="monospace"
                 textAnchor="middle"
               >
@@ -318,9 +333,13 @@ function BlackHoleScene({
   // Dilation rings: show color-coded dilation at different radii
   const dilationRings = useMemo(() => {
     const rings: { radius: number; dilation: number }[] = [];
-    for (let r = 1.5; r <= 10; r += 0.5) {
-      const d = engine.schwarzschildDilation(gm, r * rs);
-      rings.push({ radius: r, dilation: d });
+    try {
+      for (let r = 1.5; r <= 10; r += 0.5) {
+        const d = engine.schwarzschildDilation(gm, r * rs);
+        rings.push({ radius: r, dilation: isNaN(d) ? 0 : d });
+      }
+    } catch (e) {
+      // Engine error — return empty rings
     }
     return rings;
   }, [gm, rs]);

@@ -13,38 +13,46 @@ export function DilationTable() {
   const [referenceBody, setReferenceBody] = useState("Earth");
   const [hoveredBody, setHoveredBody] = useState<string | null>(null);
 
-  const bodies = useMemo(() => engine.getSolarSystemDilation(), []);
+  const bodies = useMemo(() => {
+    try {
+      return engine.getSolarSystemDilation();
+    } catch (e) {
+      return [];
+    }
+  }, []);
 
   const refBody = bodies.find((b) => b.name === referenceBody);
   const refFactor = refBody?.dilation_factor ?? 1;
 
   const extremeObjects: BodyDilation[] = useMemo(
-    () => [
-      {
-        name: "Neutron Star (1.4M\u2609)",
-        dilation_factor: engine.schwarzschildDilation(1.4 * engine.constants.gmSun(), 10_000),
-        seconds_lost_per_year: engine.secondsLostPerYear(
-          engine.schwarzschildDilation(1.4 * engine.constants.gmSun(), 10_000)
-        ),
-        schwarzschild_radius: (2 * 1.4 * engine.constants.gmSun()) / (299792458 * 299792458),
-        surface_gravity: (1.4 * engine.constants.gmSun()) / (10_000 * 10_000),
-      },
-      {
-        name: "Black Hole (3r\u209b)",
-        dilation_factor: engine.schwarzschildDilation(
-          10 * engine.constants.gmSun(),
-          3 * (2 * 10 * engine.constants.gmSun()) / (299792458 * 299792458)
-        ),
-        seconds_lost_per_year: engine.secondsLostPerYear(
-          engine.schwarzschildDilation(
-            10 * engine.constants.gmSun(),
-            3 * (2 * 10 * engine.constants.gmSun()) / (299792458 * 299792458)
-          )
-        ),
-        schwarzschild_radius: (2 * 10 * engine.constants.gmSun()) / (299792458 * 299792458),
-        surface_gravity: 0,
-      },
-    ],
+    () => {
+      try {
+        const gmSun = engine.constants.gmSun();
+        const c2 = 299792458 * 299792458;
+        const nsDilation = engine.schwarzschildDilation(1.4 * gmSun, 10_000);
+        const bhGm = 10 * gmSun;
+        const bhR = 3 * (2 * bhGm) / c2;
+        const bhDilation = engine.schwarzschildDilation(bhGm, bhR);
+        return [
+          {
+            name: "Neutron Star (1.4M\u2609)",
+            dilation_factor: isNaN(nsDilation) ? 0 : nsDilation,
+            seconds_lost_per_year: engine.secondsLostPerYear(isNaN(nsDilation) ? 0 : nsDilation),
+            schwarzschild_radius: (2 * 1.4 * gmSun) / c2,
+            surface_gravity: (1.4 * gmSun) / (10_000 * 10_000),
+          },
+          {
+            name: "Black Hole (3r\u209b)",
+            dilation_factor: isNaN(bhDilation) ? 0 : bhDilation,
+            seconds_lost_per_year: engine.secondsLostPerYear(isNaN(bhDilation) ? 0 : bhDilation),
+            schwarzschild_radius: (2 * bhGm) / c2,
+            surface_gravity: 0,
+          },
+        ];
+      } catch (e) {
+        return [];
+      }
+    },
     []
   );
 
@@ -82,7 +90,7 @@ export function DilationTable() {
           <text x={300} y={28} textAnchor="middle" fill="#94a3b8" fontSize={13} fontWeight={600} letterSpacing={2}>
             GRAVITATIONAL TIME DILATION MAP
           </text>
-          <text x={300} y={46} textAnchor="middle" fill="#475569" fontSize={10}>
+          <text x={300} y={46} textAnchor="middle" fill="#94a3b8" fontSize={10}>
             Circle size = dilation severity (log scale) | Reference: {referenceBody}
           </text>
 
@@ -108,6 +116,7 @@ export function DilationTable() {
                 <circle cx={cx} cy={cy} r={radius * 1.5}
                   fill={`url(#grad-${b.name.replace(/[^a-z]/gi, "")})`}
                   opacity={isHovered ? 0.8 : 0.5}
+                  style={{ transition: "opacity 0.25s ease" }}
                 />
                 {/* Body circle */}
                 <circle cx={cx} cy={cy} r={Math.max(radius * 0.4, 5)}
@@ -115,10 +124,11 @@ export function DilationTable() {
                   stroke={isRef ? "#fff" : isHovered ? b.color : "none"}
                   strokeWidth={isRef ? 2 : 1}
                   opacity={0.9}
+                  style={{ transition: "stroke 0.25s ease, stroke-width 0.25s ease" }}
                 />
                 {/* Label */}
                 <text x={cx} y={cy + radius * 0.4 + 14} textAnchor="middle"
-                  fill={isHovered ? "#f1f5f9" : "#94a3b8"} fontSize={9} fontFamily="'JetBrains Mono', monospace">
+                  fill={isHovered ? "#f1f5f9" : "#94a3b8"} fontSize={10} fontFamily="'JetBrains Mono', monospace">
                   {b.name.length > 12 ? b.name.slice(0, 10) + ".." : b.name}
                 </text>
                 {/* Dilation value on hover */}
@@ -127,7 +137,7 @@ export function DilationTable() {
                     <rect x={cx - 55} y={cy - radius * 0.4 - 32} width={110} height={24} rx={4}
                       fill="rgba(15,23,42,0.9)" stroke={b.color + "50"} strokeWidth={1} />
                     <text x={cx} y={cy - radius * 0.4 - 16} textAnchor="middle"
-                      fill="#f1f5f9" fontSize={9} fontFamily="'JetBrains Mono', monospace">
+                      fill="#f1f5f9" fontSize={10} fontFamily="'JetBrains Mono', monospace">
                       {b.dilation_factor < 0.999
                         ? `d\u03C4/dt = ${b.dilation_factor.toFixed(4)}`
                         : `1 \u2212 ${(1 - b.dilation_factor).toExponential(2)}`}
@@ -143,11 +153,11 @@ export function DilationTable() {
           })}
 
           {/* Center label */}
-          <text x={300} y={248} textAnchor="middle" fill="#64748b" fontSize={8}>flat</text>
-          <text x={300} y={260} textAnchor="middle" fill="#64748b" fontSize={8}>spacetime</text>
+          <text x={300} y={248} textAnchor="middle" fill="#94a3b8" fontSize={10}>flat</text>
+          <text x={300} y={260} textAnchor="middle" fill="#94a3b8" fontSize={10}>spacetime</text>
 
           {/* Legend */}
-          <text x={30} y={480} fill="#475569" fontSize={9}>
+          <text x={30} y={480} fill="#94a3b8" fontSize={10}>
             {"\u25CF"} Larger = stronger gravitational dilation | Click body to set reference frame
           </text>
         </svg>
@@ -206,12 +216,18 @@ export function DilationTable() {
         <div style={styles.compSection}>
           <div style={styles.compTitle}>Pairwise Comparisons</div>
           {[["Earth", "Mars"], ["Earth", "Sun"], ["Earth", "Jupiter"], ["Mercury", "Earth"]].map(([a, b]) => {
-            const diff = engine.compareBodies(a, b);
+            let diff: number;
+            try {
+              diff = engine.compareBodies(a, b);
+            } catch (e) {
+              diff = NaN;
+            }
+            const valid = !isNaN(diff);
             return (
               <div key={`${a}-${b}`} style={styles.compRow}>
                 <span style={styles.compLabel}>{a} vs {b}</span>
-                <span style={{ ...styles.compValue, color: diff > 0 ? "#34d399" : "#f87171" }}>
-                  {diff > 0 ? "+" : ""}{diff.toFixed(2)} {"\u03BCs"}/day
+                <span style={{ ...styles.compValue, color: valid ? (diff > 0 ? "#34d399" : "#f87171") : "#94a3b8" }}>
+                  {valid ? `${diff > 0 ? "+" : ""}${diff.toFixed(2)} ${"\u03BCs"}/day` : "\u2014"}
                 </span>
               </div>
             );
@@ -262,7 +278,7 @@ const styles: Record<string, React.CSSProperties> = {
   dataList: { display: "flex", flexDirection: "column", gap: "6px" },
   dataRow: {
     background: "#0f172a", borderRadius: "6px", padding: "8px",
-    cursor: "default", transition: "background 0.15s",
+    cursor: "default", transition: "background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease",
   },
   refRow: { background: "#1e293b30", border: "1px solid #3b82f640" },
   bodyHeader: {
@@ -272,7 +288,7 @@ const styles: Record<string, React.CSSProperties> = {
   dilationVal: { color: "#94a3b8", fontVariantNumeric: "tabular-nums", fontSize: "10px" },
   bodyDetail: {
     display: "flex", justifyContent: "space-between",
-    fontSize: "9px", color: "#64748b", fontVariantNumeric: "tabular-nums",
+    fontSize: "10px", color: "#94a3b8", fontVariantNumeric: "tabular-nums",
   },
   barBg: {
     height: "3px", background: "#1e293b", borderRadius: "2px",

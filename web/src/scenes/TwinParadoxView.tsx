@@ -37,10 +37,16 @@ export function TwinParadoxView() {
     const beta2 = active.speed * active.speed;
     const gamma = 1 / Math.sqrt(1 - beta2);
     const travelProper = coordTime / gamma;
-    const earthDilation = engine.schwarzschildDilation(
-      engine.constants.gmEarth(),
-      engine.constants.rEarth()
-    );
+    let earthDilation = 1;
+    try {
+      const ed = engine.schwarzschildDilation(
+        engine.constants.gmEarth(),
+        engine.constants.rEarth()
+      );
+      if (!isNaN(ed)) earthDilation = ed;
+    } catch (e) {
+      // fallback to 1
+    }
     const earthProper = earthDilation * coordTime;
     const diffSeconds = earthProper - travelProper;
     const diffYears = diffSeconds / (365.25 * 86400);
@@ -48,7 +54,7 @@ export function TwinParadoxView() {
     const contractedLy = distanceLy / gamma;
 
     return {
-      gamma,
+      gamma: isNaN(gamma) ? 1 : gamma,
       coordTimeYears: active.years,
       earthAgingYears: earthProper / (365.25 * 86400),
       travelerAgingYears: travelProper / (365.25 * 86400),
@@ -284,7 +290,7 @@ function TravelerShip({ beta, gamma }: { beta: number; gamma: number }) {
       <Html position={[0, 1.1, 0]} center style={{ pointerEvents: "none" }}>
         <div style={labelStyle("#f59e0b")}>
           <div>Traveler ({(beta * 100).toFixed(1)}% c)</div>
-          <div style={{ fontSize: "8px", color: "#a78bfa" }}>{"\u03B3"} = {gamma < 100 ? gamma.toFixed(3) : gamma.toExponential(2)}</div>
+          <div style={{ fontSize: "10px", color: "#a78bfa" }}>{"\u03B3"} = {gamma < 100 ? gamma.toFixed(3) : gamma.toExponential(2)}</div>
         </div>
       </Html>
       {/* Dilated clock */}
@@ -414,7 +420,7 @@ function TimeBar({ label, years, max, color }: { label: string; years: number; m
 
 const labelStyle = (color: string): React.CSSProperties => ({
   color,
-  fontSize: "9px",
+  fontSize: "10px",
   fontFamily: "'JetBrains Mono', monospace",
   background: "rgba(1,1,8,0.85)",
   padding: "2px 8px",
@@ -553,7 +559,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   timelineLabel: {
     width: "65px",
-    fontSize: "9px",
+    fontSize: "10px",
     color: "#94a3b8",
     textAlign: "right",
   },
@@ -566,7 +572,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   timelineValue: {
     width: "55px",
-    fontSize: "9px",
+    fontSize: "10px",
     color: "#e2e8f0",
     fontVariantNumeric: "tabular-nums",
   },
@@ -577,8 +583,8 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "center",
   },
   formulaTitle: {
-    fontSize: "9px",
-    color: "#475569",
+    fontSize: "10px",
+    color: "#94a3b8",
     letterSpacing: "1px",
     textTransform: "uppercase" as const,
     marginBottom: "3px",

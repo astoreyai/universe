@@ -4,14 +4,18 @@ import { engine } from "../engine/wasm-bridge";
 export function CosmologyPanel() {
   const [redshift, setRedshift] = useState(1.0);
 
-  const ageGyr = useMemo(() => engine.ageOfUniverseGyr(), []);
+  const safeCall = (fn: () => number, fallback = 0) => {
+    try { const v = fn(); return isNaN(v) ? fallback : v; } catch { return fallback; }
+  };
+
+  const ageGyr = useMemo(() => safeCall(() => engine.ageOfUniverseGyr(), 13.8), []);
 
   const data = useMemo(
     () => ({
-      dilation: engine.cosmologicalDilation(redshift),
-      lookback: engine.lookbackTimeGyr(redshift),
-      comoving: engine.comovingDistanceGly(redshift),
-      hubble: engine.hubbleParameterKmSMpc(redshift),
+      dilation: safeCall(() => engine.cosmologicalDilation(redshift), 1),
+      lookback: safeCall(() => engine.lookbackTimeGyr(redshift)),
+      comoving: safeCall(() => engine.comovingDistanceGly(redshift)),
+      hubble: safeCall(() => engine.hubbleParameterKmSMpc(redshift), 67.4),
     }),
     [redshift]
   );
@@ -21,9 +25,9 @@ export function CosmologyPanel() {
     () =>
       [0.01, 0.1, 0.5, 1, 2, 5, 10, 100, 1100].map((z) => ({
         z,
-        dilation: engine.cosmologicalDilation(z),
-        lookback: engine.lookbackTimeGyr(z),
-        comoving: engine.comovingDistanceGly(z),
+        dilation: safeCall(() => engine.cosmologicalDilation(z), 1),
+        lookback: safeCall(() => engine.lookbackTimeGyr(z)),
+        comoving: safeCall(() => engine.comovingDistanceGly(z)),
       })),
     []
   );
@@ -217,7 +221,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   heroDetail: {
     fontSize: "10px",
-    color: "#475569",
+    color: "#94a3b8",
     marginTop: "4px",
   },
   sliderSection: {
@@ -252,7 +256,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     fontSize: "10px",
-    color: "#475569",
+    color: "#94a3b8",
     marginTop: "4px",
   },
   resultGrid: {
@@ -280,7 +284,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   resultDetail: {
     fontSize: "10px",
-    color: "#475569",
+    color: "#94a3b8",
     marginTop: "2px",
   },
   tableSection: {
