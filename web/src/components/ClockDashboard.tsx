@@ -199,7 +199,7 @@ export function ClockDashboard() {
                 <text x={30} y={y + 4} fill={c.color} fontSize={10} fontWeight={600}>{c.label}</text>
                 <rect x={70} y={y - 6} width={barWidth} height={12} rx={3} fill={c.color} opacity={0.3} />
                 <rect x={70} y={y - 6} width={barWidth} height={12} rx={3} fill={c.color} opacity={0.15} />
-                <text x={75 + barWidth} y={y + 4} fill="#e2e8f0" fontSize={10}>+{c.rateNsPerSec.toFixed(2)} ns/s</text>
+                <text x={75 + barWidth} y={y + 4} fill="#e2e8f0" fontSize={10}>{c.rateNsPerSec > 0 ? "+" : ""}{c.rateNsPerSec.toFixed(2)} ns/s</text>
               </g>
             );
           })}

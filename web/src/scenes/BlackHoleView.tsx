@@ -418,7 +418,7 @@ function BlackHoleScene({
       </mesh>
 
       {/* Round 6 — Schwarzschild radius label at event horizon */}
-      <Html position={[1, 0.5, 0]} center style={{ pointerEvents: "none" }}>
+      <Html position={[1.8, 0.6, 0]} center style={{ pointerEvents: "none" }}>
         <div style={{ color: "#ef4444", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.85)", padding: "2px 6px", borderRadius: "3px", whiteSpace: "nowrap", border: "1px solid #ef444430" }}>
           r = {(rs / 1000).toFixed(1)} km
         </div>
