@@ -258,14 +258,14 @@ function TravelerShip({ beta, gamma }: { beta: number; gamma: number }) {
     }
   });
 
-  // Lorentz contraction visual: flatten the ship along direction of motion
-  const scaleZ = 1 / gamma;
-  const clampedScale = Math.max(scaleZ, 0.05);
+  // Lorentz contraction: flatten along direction of motion (X axis)
+  // Cone is rotated Z→X, so cone's Y axis becomes X in world space — scale Y for contraction
+  const contractFactor = Math.max(1 / gamma, 0.05);
 
   return (
     <group ref={groupRef} position={[4, 0, 0]}>
-      {/* Ship body — wedge shape */}
-      <mesh rotation={[0, 0, Math.PI / 2]} scale={[0.3, 0.5, clampedScale]}>
+      {/* Ship body — wedge shape, contracted along motion direction */}
+      <mesh rotation={[0, 0, Math.PI / 2]} scale={[0.3, contractFactor * 0.5, 0.3]}>
         <coneGeometry args={[0.4, 1.2, 4]} />
         <meshBasicMaterial color="#ffd54f" />
       </mesh>
@@ -309,37 +309,34 @@ function TravelerClock({ gamma }: { gamma: number }) {
 function SpacetimeGrid({ beta }: { beta: number }) {
   const contractFactor = Math.sqrt(1 - beta * beta);
 
-  const gridLines = useMemo(() => {
-    const lines: { pts: THREE.Vector3[]; contracted: boolean }[] = [];
-    // Horizontal grid lines (unaffected by contraction)
+  // Pre-compute all line segment positions as flat arrays (no THREE.js object creation in render)
+  const { positions, isContracted } = useMemo(() => {
+    const segs: { p: number[]; c: boolean }[] = [];
+    // Horizontal grid lines (unaffected)
     for (let z = -6; z <= 6; z += 2) {
-      lines.push({ pts: [new THREE.Vector3(-12, -2, z), new THREE.Vector3(12, -2, z)], contracted: false });
+      segs.push({ p: [-12, -2, z, 12, -2, z], c: false });
     }
-    // Vertical grid lines (space-like) — contracted by Lorentz factor
+    // Vertical grid lines — contracted by Lorentz factor
     for (let x = -12; x <= 12; x += 2) {
-      const cx = x * contractFactor; // Apply Lorentz contraction
-      lines.push({ pts: [new THREE.Vector3(cx, -2, -6), new THREE.Vector3(cx, -2, 6)], contracted: true });
+      const cx = x * contractFactor;
+      segs.push({ p: [cx, -2, -6, cx, -2, 6], c: true });
     }
-    return lines;
+    return { positions: segs.map(s => s.p), isContracted: segs.map(s => s.c) };
   }, [contractFactor]);
 
+  // Single geometry with all lines — no per-render allocation
+  const geometry = useMemo(() => {
+    const allPos: number[] = [];
+    positions.forEach(p => allPos.push(...p));
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.Float32BufferAttribute(allPos, 3));
+    return geom;
+  }, [positions]);
+
   return (
-    <group>
-      {gridLines.map((line, i) => (
-        <primitive key={`${i}-${contractFactor.toFixed(3)}`} object={(() => {
-          const geom = new THREE.BufferGeometry();
-          geom.setAttribute("position", new THREE.BufferAttribute(
-            new Float32Array(line.pts.flatMap((p) => [p.x, p.y, p.z])), 3
-          ));
-          const mat = new THREE.LineBasicMaterial({
-            color: line.contracted ? "#3b82f6" : "#1e293b",
-            transparent: true,
-            opacity: line.contracted ? 0.3 : 0.2,
-          });
-          return new THREE.Line(geom, mat);
-        })()} />
-      ))}
-    </group>
+    <lineSegments geometry={geometry}>
+      <lineBasicMaterial color="#3b82f6" transparent opacity={0.25} />
+    </lineSegments>
   );
 }
 
@@ -363,10 +360,10 @@ function StreakingStars({ beta }: { beta: number }) {
   useFrame(({ clock }) => {
     if (!pointsRef.current) return;
     const attr = pointsRef.current.geometry.getAttribute("position") as THREE.BufferAttribute;
-    const dt = clock.getDelta();
-    const streakSpeed = beta * 8;
+    const elapsed = clock.getElapsedTime();
+    const streakSpeed = beta * 0.15;
     for (let i = 0; i < velocities.length; i++) {
-      attr.array[i * 3] -= streakSpeed * velocities[i] * dt * 60;
+      attr.array[i * 3] -= streakSpeed * velocities[i];
       if (attr.array[i * 3] < -15) attr.array[i * 3] = 15;
     }
     attr.needsUpdate = true;

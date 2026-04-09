@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState, forwardRef } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html, Line, Stars as DreiStars } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
@@ -50,39 +50,31 @@ class GravitationalLensEffect extends Effect {
   }
 }
 
-const GravLens = forwardRef<GravitationalLensEffect, { center?: [number, number]; strength?: number; radius?: number }>(
-  function GravLens({ center = [0.5, 0.5], strength = 1.0, radius = 0.4 }, ref) {
-    const effect = useMemo(() => new GravitationalLensEffect({ center, strength, radius }), []);
-
-    // Update uniforms when props change
-    useMemo(() => {
-      effect.uniforms.get("uCenter")!.value.set(center[0], center[1]);
-      effect.uniforms.get("uStrength")!.value = strength;
-      effect.uniforms.get("uRadius")!.value = radius;
-    }, [effect, center, strength, radius]);
-
-    return <primitive ref={ref} object={effect} dispose={null} />;
-  }
-);
-
-// Component that tracks the black hole position and updates lensing
+// Tracks black hole screen position and updates lensing uniforms directly
 function LensingTracker({ mass }: { mass: number }) {
-  const { camera, size } = useThree();
-  const effectRef = useRef<GravitationalLensEffect>(null);
+  const { camera } = useThree();
   const bhPos = useMemo(() => new THREE.Vector3(0, 0, 0), []);
   const projected = useMemo(() => new THREE.Vector3(), []);
 
+  const effect = useMemo(() => new GravitationalLensEffect({
+    strength: Math.min(mass * 0.5, 8.0),
+    radius: 0.5,
+  }), []);
+
+  // Update strength when mass changes
+  useEffect(() => {
+    effect.uniforms.get("uStrength")!.value = Math.min(mass * 0.5, 8.0);
+  }, [effect, mass]);
+
+  // Track black hole screen position every frame
   useFrame(() => {
-    if (!effectRef.current) return;
     projected.copy(bhPos).project(camera);
     const cx = (projected.x + 1) / 2;
-    const cy = 1 - (projected.y + 1) / 2; // flip Y for UV space
-    effectRef.current.uniforms.get("uCenter")!.value.set(cx, cy);
+    const cy = 1 - (projected.y + 1) / 2;
+    effect.uniforms.get("uCenter")!.value.set(cx, cy);
   });
 
-  const strength = Math.min(mass * 0.5, 8.0);
-
-  return <GravLens ref={effectRef} strength={strength} radius={0.5} />;
+  return <primitive object={effect} dispose={null} />;
 }
 
 export function BlackHoleView() {
@@ -343,12 +335,12 @@ function BlackHoleScene({
 
       {/* Accretion disk — temperature gradient (hot blue-white inner, cooler red outer) */}
       <group ref={accretionRef} rotation={[Math.PI * 0.08, 0, 0]}>
-        {dilationRings.map((ring, i) => {
+        {dilationRings.map((ring) => {
           const t = (ring.radius - 1.5) / 8.5; // 0=inner, 1=outer
           // Temperature color: white-blue (inner) → orange → dark red (outer)
           const tempColor = t < 0.2 ? "#c0d8ff" : t < 0.4 ? "#ffd54f" : t < 0.7 ? "#ff8f00" : "#cc3300";
           return (
-            <mesh key={i} rotation={[Math.PI / 2, 0, 0]}>
+            <mesh key={ring.radius} rotation={[Math.PI / 2, 0, 0]}>
               <ringGeometry args={[ring.radius * SCALE, (ring.radius + 0.35) * SCALE, 96]} />
               <meshBasicMaterial color={tempColor} transparent opacity={0.15 + (1 - t) * 0.35} side={THREE.DoubleSide} />
             </mesh>

@@ -136,7 +136,7 @@ export function SolarSystemView() {
             <Vignette eskil={false} offset={0.2} darkness={0.7} />
           </EffectComposer>
 
-          <OrbitControls enablePan maxDistance={200} minDistance={2} enableDamping dampingFactor={0.05} />
+          <OrbitControls enablePan maxDistance={200} minDistance={2} enableDamping dampingFactor={0.05} enabled={!focused} />
         </Canvas>
       </div>
 
@@ -306,8 +306,8 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, planetPositi
   const inclRad = (d.incl * Math.PI) / 180;
 
   const tex = useLoader(THREE.TextureLoader, `${BASE}textures/${d.texture}`);
-  // Night lights texture always loaded (hook rules), only used for Earth
-  const nightTex = useLoader(THREE.TextureLoader, d.name === "Earth" ? `${BASE}textures/earth_night.jpg` : `${BASE}textures/${d.texture}`);
+  // Earth night lights — always loads earth_night.jpg (cached by TextureLoader, only rendered for Earth)
+  const nightTex = useLoader(THREE.TextureLoader, `${BASE}textures/earth_night.jpg`);
 
   const gridMat = useMemo(() => new THREE.ShaderMaterial({
     vertexShader: gridVertexShader,
@@ -417,7 +417,8 @@ function MoonBody({ name, orbitR, radius, color, parentR, inclination }: {
   // Amplify inclination for visibility (real values are tiny — Moon's 5.15° is the largest)
   const inclRad = (inclination * Math.PI) / 180 * 3; // 3x amplification
 
-  const moonTex = useLoader(THREE.TextureLoader, name === "Moon" ? `${BASE}textures/moon.jpg` : `${BASE}textures/mercury.jpg`);
+  // Always load moon.jpg (TextureLoader caches it); only apply to Earth's Moon
+  const moonTex = useLoader(THREE.TextureLoader, `${BASE}textures/moon.jpg`);
 
   useFrame(({ clock }) => {
     if (ref.current) {
