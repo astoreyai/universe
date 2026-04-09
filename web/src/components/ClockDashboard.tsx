@@ -124,6 +124,7 @@ export function ClockDashboard() {
             </text>
           </g>
           <line x1={120} y1={59} x2={520} y2={59} stroke="#1e293b" strokeWidth={0.5} />
+          <text x={320} y={73} textAnchor="middle" fill="#34d399" fontSize={10} fontStyle="italic">Each tier corrects for gravity — higher tiers tick faster (less gravity)</text>
 
           {/* Tiered clock layout */}
           {tierClocks.map((clocks, tierIdx) => {
@@ -250,6 +251,11 @@ export function ClockDashboard() {
             <div style={{ ...styles.detailWhyYouCare, fontStyle: "normal", fontWeight: 700 }}><strong>Why you care:</strong> {selInfo.whyYouCare}</div>
           </div>
         )}
+
+        <div style={{ background: "#0f172a", borderLeft: "3px solid #34d399", padding: "8px", borderRadius: "6px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", marginBottom: "2px" }}>1-Minute Takeaway</div>
+          <div style={{ fontSize: "10px", color: "#ffffff", lineHeight: 1.5 }}>GPS uses TCG/TCB because Earth's gravity slows clocks. Without relativistic correction, GPS maps drift 10 km per day.</div>
+        </div>
 
         <div style={styles.clockList}>
           {CLOCKS.map((c) => {

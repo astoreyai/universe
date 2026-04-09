@@ -220,6 +220,9 @@ export function CosmicTimelineView() {
             <span>Big Bang</span>
             <span>Now</span>
           </div>
+          <div style={{ fontSize: "9px", color: "#94a3b8", fontStyle: "italic", lineHeight: "1.3", marginTop: "2px" }}>
+            Slider uses log scale — small movements near Big Bang span huge time periods, near Now they show fine detail.
+          </div>
           <div style={{ marginTop: "6px" }}>
             <div style={{ width: (1 / (1 + sliceZ)) * 100 + "%", height: "4px", background: "#f59e0b", borderRadius: "2px", transition: "width 0.3s" }} />
             <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px" }}>
@@ -348,10 +351,10 @@ export function CosmicTimelineView() {
                 return (
                 <tr key={m.z} onClick={() => setEpochAge(m.age)}
                   className="milestone-row"
-                  style={{ cursor: "pointer", transition: "background 0.15s", background: isClosest ? "#1e293b" : "transparent" }}
+                  style={{ cursor: "pointer", transition: "background 0.15s", background: isClosest ? "rgba(59,130,246,0.1)" : "transparent", borderLeft: isClosest ? "3px solid #3b82f6" : "3px solid transparent" }}
                   title={`Jump to z=${m.z} (${m.age.toFixed(2)} Gyr)`}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1e293b"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isClosest ? "#1e293b" : "transparent"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isClosest ? "rgba(59,130,246,0.1)" : "transparent"; }}
                 >
                   <td style={styles.td}>{m.z}</td>
                   <td style={styles.tdMono}>{m.a}</td>
