@@ -216,6 +216,12 @@ export function BlackHoleView() {
               <span>{((2 * gm) / C2 / 1000).toFixed(1)} km</span>
             </div>
           )}
+          <div style={styles.resultRow}>
+            <span>Escape velocity</span>
+            <span style={{ color: "#a78bfa" }}>
+              {observerR > 1 ? `${Math.sqrt(1 / observerR).toFixed(4)} c` : "> c"}
+            </span>
+          </div>
         </div>
 
         <div style={styles.profileSection}>
@@ -276,6 +282,27 @@ export function BlackHoleView() {
             <text x={32} y={20} fill="#ef4444" fontSize={10} fontFamily="monospace">
               r{"\u209b"}
             </text>
+            {/* ISCO radius marker — r_ISCO = 3rs*(1 - spin*0.5) */}
+            {(() => {
+              const iscoRs = 3 * (1 - spin * 0.5);
+              const iscoX = 30 + ((iscoRs - 1.05) / 19) * 225;
+              return iscoX >= 30 && iscoX <= 255 ? (
+                <g>
+                  <line
+                    x1={iscoX}
+                    y1={10}
+                    x2={iscoX}
+                    y2={110}
+                    stroke="#a78bfa"
+                    strokeWidth={1}
+                    strokeDasharray="4,2"
+                  />
+                  <text x={iscoX + 2} y={20} fill="#a78bfa" fontSize={9} fontFamily="monospace">
+                    ISCO
+                  </text>
+                </g>
+              ) : null;
+            })()}
             {/* X axis labels */}
             {[1, 5, 10, 15, 20].map((r) => (
               <text
@@ -352,6 +379,13 @@ function BlackHoleScene({
         <meshBasicMaterial color="#000000" />
       </mesh>
 
+      {/* Round 6 — Schwarzschild radius label at event horizon */}
+      <Html position={[1, 0.5, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{ color: "#ef4444", fontSize: "9px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.85)", padding: "2px 6px", borderRadius: "3px", whiteSpace: "nowrap", border: "1px solid #ef444430" }}>
+          r = {(rs / 1000).toFixed(1)} km
+        </div>
+      </Html>
+
       {/* Photon sphere glow (1.5 rₛ) — bright ring where light orbits */}
       <mesh>
         <sphereGeometry args={[1.5 * SCALE, 48, 48]} />
@@ -404,6 +438,35 @@ function BlackHoleScene({
         </mesh>
       )}
 
+      {/* Round 7 — Frame dragging indicator ring at 1.2rs */}
+      {spin > 0.1 && (
+        <FrameDraggingRing spin={spin} scale={SCALE} />
+      )}
+
+      {/* Round 8 — Photon sphere orbit with orbiting photon dot at 1.5rs */}
+      <PhotonSphereOrbit scale={SCALE} />
+
+      {/* Round 9 — Warning label when observer approaches event horizon */}
+      {observerRs < 2 && (
+        <Html position={[observerRs * SCALE, 1.2, 0]} center style={{ pointerEvents: "none" }}>
+          <div style={{
+            color: "#ef4444",
+            fontSize: "11px",
+            fontWeight: 700,
+            fontFamily: "'JetBrains Mono', monospace",
+            background: "rgba(239,68,68,0.15)",
+            padding: "4px 10px",
+            borderRadius: "4px",
+            whiteSpace: "nowrap",
+            border: "1px solid #ef4444",
+            animation: "pulse 1s ease-in-out infinite alternate",
+          }}>
+            APPROACHING EVENT HORIZON
+          </div>
+          <style>{`@keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }`}</style>
+        </Html>
+      )}
+
       {/* Observer marker — color-coded by dilation severity */}
       <group ref={observerRef} position={[observerRs * SCALE, 0, 0]}>
         <mesh>
@@ -445,6 +508,73 @@ function BlackHoleScene({
           />
         );
       })}
+    </group>
+  );
+}
+
+// Round 7 — Frame dragging ring that spins faster than accretion disk
+function FrameDraggingRing({ spin, scale }: { spin: number; scale: number }) {
+  const ringRef = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    if (ringRef.current) {
+      ringRef.current.rotation.z = clock.getElapsedTime() * spin * 2;
+    }
+  });
+  return (
+    <group>
+      <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.2 * scale, 0.015, 8, 64]} />
+        <meshBasicMaterial color="#c084fc" transparent opacity={0.6} />
+      </mesh>
+      <Html position={[1.2 * scale, 0.3, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{ color: "#c084fc", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.8)", padding: "1px 5px", borderRadius: "3px", whiteSpace: "nowrap" }}>
+          Frame Dragging
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+// Round 8 — Photon sphere orbit visualization at 1.5rs with orbiting photon dot
+function PhotonSphereOrbit({ scale }: { scale: number }) {
+  const dotRef = useRef<THREE.Mesh>(null);
+  const radius = 1.5 * scale;
+
+  // Generate dashed orbit ring points
+  const dashPoints = useMemo(() => {
+    const segments: THREE.Vector3[][] = [];
+    const totalSegments = 24;
+    for (let s = 0; s < totalSegments; s++) {
+      if (s % 2 !== 0) continue; // skip every other segment for dashing
+      const seg: THREE.Vector3[] = [];
+      const startAngle = (s / totalSegments) * Math.PI * 2;
+      const endAngle = ((s + 1) / totalSegments) * Math.PI * 2;
+      for (let i = 0; i <= 8; i++) {
+        const a = startAngle + (i / 8) * (endAngle - startAngle);
+        seg.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+      }
+      segments.push(seg);
+    }
+    return segments;
+  }, [radius]);
+
+  useFrame(({ clock }) => {
+    if (dotRef.current) {
+      const t = clock.getElapsedTime() * 3; // high speed for photon
+      dotRef.current.position.x = Math.cos(t) * radius;
+      dotRef.current.position.z = Math.sin(t) * radius;
+    }
+  });
+
+  return (
+    <group>
+      {dashPoints.map((seg, i) => (
+        <Line key={i} points={seg} color="#ffd54f" lineWidth={0.8} transparent opacity={0.4} />
+      ))}
+      <mesh ref={dotRef} position={[radius, 0, 0]}>
+        <sphereGeometry args={[0.06, 12, 12]} />
+        <meshBasicMaterial color="#fffde7" />
+      </mesh>
     </group>
   );
 }

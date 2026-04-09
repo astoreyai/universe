@@ -9,9 +9,38 @@ const BODY_COLORS: Record<string, string> = {
   "Neutron Star (1.4M\u2609)": "#a78bfa", "Black Hole (3r\u209b)": "#ef4444",
 };
 
+// ─── Body descriptions (shown on hover) ───────────────────────────────────
+
+const BODY_DESCRIPTIONS: Record<string, string> = {
+  Sun: "Deepest gravity well in solar system \u2014 clocks lose 66s/year",
+  Earth: "Our reference frame \u2014 GPS corrects +38.6 \u03BCs/day for satellite clocks",
+  Mars: "Weaker gravity than Earth \u2014 clocks run slightly faster",
+  Jupiter: "Massive gas giant \u2014 second deepest gravity well",
+  "Neutron Star (1.4M\u2609)": "Collapsed stellar core \u2014 extreme spacetime curvature",
+  "Black Hole (3r\u209b)": "At 3\u00D7 Schwarzschild radius \u2014 time nearly frozen",
+};
+
+// ─── Escape velocity helper ───────────────────────────────────────────────
+
+function computeEscapeVelocity(b: BodyDilation): number | null {
+  if (b.surface_gravity <= 0 || b.schwarzschild_radius <= 0) return null;
+  const c = 299792458;
+  const c2 = c * c;
+  const GM = b.schwarzschild_radius * c2 / 2;
+  const R = GM / b.surface_gravity;
+  return Math.sqrt(2 * GM / R);   // m/s
+}
+
+function formatEscapeVelocity(vEsc: number | null): string {
+  if (vEsc === null) return "\u2014";
+  return `${(vEsc / 1000).toFixed(1)} km/s`;
+}
+
 export function DilationTable() {
   const [referenceBody, setReferenceBody] = useState("Earth");
   const [hoveredBody, setHoveredBody] = useState<string | null>(null);
+  const [compA, setCompA] = useState("Earth");
+  const [compB, setCompB] = useState("Sun");
 
   const bodies = useMemo(() => {
     try {
@@ -56,7 +85,11 @@ export function DilationTable() {
     []
   );
 
-  const allBodies = [...bodies, ...extremeObjects];
+  // Sort all bodies by dilation severity (strongest first) — shared by chart + data panel
+  const allBodies = useMemo(() => {
+    const merged = [...bodies, ...extremeObjects];
+    return merged.sort((a, b) => (1 - b.dilation_factor) - (1 - a.dilation_factor));
+  }, [bodies, extremeObjects]);
 
   // Compute radial chart data — use log scale for dilation severity
   const chartBodies = useMemo(() => {
@@ -64,7 +97,7 @@ export function DilationTable() {
       const shift = 1 - b.dilation_factor;
       const logSeverity = shift > 0 ? Math.max(Math.log10(shift) + 10, 0) / 10 : 0;
       return { ...b, shift, logSeverity, color: BODY_COLORS[b.name] || "#94a3b8" };
-    }).sort((a, b) => b.logSeverity - a.logSeverity); // strongest dilation first
+    }); // already sorted by allBodies
   }, [allBodies]);
 
   return (
@@ -160,6 +193,20 @@ export function DilationTable() {
           <text x={30} y={480} fill="#94a3b8" fontSize={10}>
             {"\u25CF"} Larger = stronger gravitational dilation | Click body to set reference frame
           </text>
+
+          {/* Visual scale legend — reference circles */}
+          <g>
+            <text x={42} y={402} textAnchor="middle" fill="#64748b" fontSize={9} fontWeight={600}>SCALE</text>
+            {/* Mild */}
+            <circle cx={30} cy={420} r={5} fill="none" stroke="#64748b" strokeWidth={0.8} />
+            <text x={42} y={423} fill="#64748b" fontSize={8}>Mild (Earth)</text>
+            {/* Moderate */}
+            <circle cx={30} cy={440} r={10} fill="none" stroke="#64748b" strokeWidth={0.8} />
+            <text x={46} y={443} fill="#64748b" fontSize={8}>Moderate (Jupiter)</text>
+            {/* Extreme */}
+            <circle cx={30} cy={464} r={16} fill="none" stroke="#64748b" strokeWidth={0.8} />
+            <text x={52} y={467} fill="#64748b" fontSize={8}>Extreme (NS/BH)</text>
+          </g>
         </svg>
       </div>
 
@@ -179,9 +226,15 @@ export function DilationTable() {
           {allBodies.map((b) => {
             const relDiff = (b.dilation_factor - refFactor) * 86_400 * 1e6;
             const isRef = b.name === referenceBody;
+            const isHovered = hoveredBody === b.name;
             const color = BODY_COLORS[b.name] || "#94a3b8";
+            const vEsc = computeEscapeVelocity(b);
             return (
-              <div key={b.name} style={{ ...styles.dataRow, ...(isRef ? styles.refRow : {}) }}
+              <div key={b.name} style={{
+                ...styles.dataRow,
+                ...(isRef ? styles.refRow : {}),
+                ...(isHovered ? styles.dataRowHover : {}),
+              }}
                 onPointerEnter={() => setHoveredBody(b.name)}
                 onPointerLeave={() => setHoveredBody(null)}
               >
@@ -199,6 +252,14 @@ export function DilationTable() {
                     {isRef ? "REF" : formatMicroseconds(relDiff) + "/day"}
                   </span>
                 </div>
+                {/* Escape velocity */}
+                <div style={styles.bodyDetail}>
+                  <span>v_esc: {formatEscapeVelocity(vEsc)}</span>
+                </div>
+                {/* Description on hover */}
+                {isHovered && BODY_DESCRIPTIONS[b.name] && (
+                  <div style={styles.bodyDesc}>{BODY_DESCRIPTIONS[b.name]}</div>
+                )}
                 {/* Visual severity bar */}
                 <div style={styles.barBg}>
                   <div style={{
@@ -212,26 +273,42 @@ export function DilationTable() {
           })}
         </div>
 
-        {/* Comparison pairs */}
+        {/* Pairwise comparison — user-selectable */}
         <div style={styles.compSection}>
-          <div style={styles.compTitle}>Pairwise Comparisons</div>
-          {[["Earth", "Mars"], ["Earth", "Sun"], ["Earth", "Jupiter"], ["Mercury", "Earth"]].map(([a, b]) => {
+          <div style={styles.compTitle}>Pairwise Comparison</div>
+          <div style={styles.compControls}>
+            <select value={compA} onChange={(e) => setCompA(e.target.value)} style={styles.selectSmall}>
+              {allBodies.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
+            </select>
+            <span style={{ color: "#64748b", fontSize: "10px" }}>vs</span>
+            <select value={compB} onChange={(e) => setCompB(e.target.value)} style={styles.selectSmall}>
+              {allBodies.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
+            </select>
+          </div>
+          {(() => {
             let diff: number;
             try {
-              diff = engine.compareBodies(a, b);
+              diff = engine.compareBodies(compA, compB);
             } catch (e) {
-              diff = NaN;
+              // Fallback: compute from dilation factors directly
+              const bodyA = allBodies.find((b) => b.name === compA);
+              const bodyB = allBodies.find((b) => b.name === compB);
+              if (bodyA && bodyB) {
+                diff = (bodyA.dilation_factor - bodyB.dilation_factor) * 86_400 * 1e6;
+              } else {
+                diff = NaN;
+              }
             }
             const valid = !isNaN(diff);
             return (
-              <div key={`${a}-${b}`} style={styles.compRow}>
-                <span style={styles.compLabel}>{a} vs {b}</span>
+              <div style={styles.compRow}>
+                <span style={styles.compLabel}>{compA} vs {compB}</span>
                 <span style={{ ...styles.compValue, color: valid ? (diff > 0 ? "#34d399" : "#f87171") : "#94a3b8" }}>
                   {valid ? `${diff > 0 ? "+" : ""}${diff.toFixed(2)} ${"\u03BCs"}/day` : "\u2014"}
                 </span>
               </div>
             );
-          })}
+          })()}
         </div>
       </div>
     </div>
@@ -280,6 +357,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#0f172a", borderRadius: "6px", padding: "8px",
     cursor: "default", transition: "background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease",
   },
+  dataRowHover: {
+    boxShadow: "0 2px 12px rgba(148,163,184,0.15)",
+    transform: "scale(1.02)",
+    background: "#1e293b",
+  },
   refRow: { background: "#1e293b30", border: "1px solid #3b82f640" },
   bodyHeader: {
     display: "flex", justifyContent: "space-between",
@@ -289,6 +371,10 @@ const styles: Record<string, React.CSSProperties> = {
   bodyDetail: {
     display: "flex", justifyContent: "space-between",
     fontSize: "10px", color: "#94a3b8", fontVariantNumeric: "tabular-nums",
+  },
+  bodyDesc: {
+    fontSize: "9px", color: "#94a3b8", fontStyle: "italic",
+    marginTop: "3px", lineHeight: "1.3", opacity: 0.85,
   },
   barBg: {
     height: "3px", background: "#1e293b", borderRadius: "2px",
@@ -300,6 +386,13 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex", flexDirection: "column", gap: "4px",
   },
   compTitle: { fontSize: "10px", color: "#64748b", fontWeight: 600, letterSpacing: "0.5px" },
+  compControls: {
+    display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px",
+  },
+  selectSmall: {
+    background: "#1e293b", color: "#e2e8f0", border: "1px solid #334155",
+    borderRadius: "4px", padding: "3px 6px", fontSize: "10px", fontFamily: "inherit", flex: 1,
+  },
   compRow: {
     display: "flex", justifyContent: "space-between",
     fontSize: "10px", padding: "2px 0",

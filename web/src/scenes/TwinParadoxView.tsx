@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Html, Stars as DreiStars } from "@react-three/drei";
+import { OrbitControls, Html, Stars as DreiStars, Line } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { engine } from "../engine/wasm-bridge";
@@ -11,12 +11,12 @@ const C = 299792458;
 
 type Scenario = "custom" | "gps" | "iss" | "proxima" | "galactic";
 
-const PRESETS: Record<string, { speed: number; years: number; label: string }> = {
-  custom: { speed: 0.5, years: 10, label: "Custom" },
-  gps: { speed: 3874 / C, years: 1, label: "GPS Satellite" },
-  iss: { speed: 7660 / C, years: 1, label: "ISS" },
-  proxima: { speed: 0.1, years: 84.6, label: "Proxima Centauri" },
-  galactic: { speed: 0.99, years: 100, label: "Galactic Voyage" },
+const PRESETS: Record<string, { speed: number; years: number; label: string; description: string }> = {
+  custom: { speed: 0.5, years: 10, label: "Custom", description: "User-defined speed and duration" },
+  gps: { speed: 3874 / C, years: 1, label: "GPS Satellite", description: "Orbiting at 3,874 m/s — clocks drift ~38 \u00B5s/day vs ground" },
+  iss: { speed: 7660 / C, years: 1, label: "ISS", description: "Low Earth orbit at 7,660 m/s — astronauts age slightly less" },
+  proxima: { speed: 0.1, years: 84.6, label: "Proxima Centauri", description: "Round trip to nearest star at 10% c — 4.24 ly each way" },
+  galactic: { speed: 0.99, years: 100, label: "Galactic Voyage", description: "Near-light-speed journey — extreme time dilation, traveler barely ages" },
 };
 
 // ─── Main component ────────────────────────────────────────────────────────
@@ -112,6 +112,13 @@ export function TwinParadoxView() {
           ))}
         </div>
 
+        {/* Round 10 — Scenario description */}
+        {scenario !== "custom" && (
+          <div style={{ fontSize: "10px", color: "#64748b", fontStyle: "italic", padding: "0 2px", marginTop: "-6px" }}>
+            {PRESETS[scenario].description}
+          </div>
+        )}
+
         {/* Speed slider */}
         <div style={styles.sliderGroup}>
           <div style={styles.sliderHeader}>
@@ -195,16 +202,22 @@ export function TwinParadoxView() {
 function TwinScene({ beta, gamma }: { beta: number; gamma: number }) {
   return (
     <group>
-      <EarthTwin />
+      <EarthTwin gamma={gamma} />
       <TravelerShip beta={beta} gamma={gamma} />
       <SpacetimeGrid beta={beta} />
       <StreakingStars beta={beta} />
+      {/* Round 5 — Reference cubes for Lorentz contraction comparison */}
+      <ContractionCubes gamma={gamma} />
+      {/* Round 7 — Speed of light indicator line */}
+      <SpeedOfLightIndicator />
+      {/* Round 9 — Distance ruler */}
+      <DistanceRuler />
     </group>
   );
 }
 
 // Earth twin — small blue sphere with label
-function EarthTwin() {
+function EarthTwin({ gamma }: { gamma: number }) {
   const ref = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
     if (ref.current) ref.current.rotation.y = clock.getElapsedTime() * 0.2;
@@ -227,6 +240,10 @@ function EarthTwin() {
       {/* Clock display */}
       <Html position={[0, -1.0, 0]} center style={{ pointerEvents: "none" }}>
         <EarthClock />
+      </Html>
+      {/* Round 8 — Age display */}
+      <Html position={[0, -1.6, 0]} center style={{ pointerEvents: "none" }}>
+        <EarthAgeLabel />
       </Html>
     </group>
   );
@@ -297,6 +314,10 @@ function TravelerShip({ beta, gamma }: { beta: number; gamma: number }) {
       <Html position={[0, -1.0, 0]} center style={{ pointerEvents: "none" }}>
         <TravelerClock gamma={gamma} />
       </Html>
+      {/* Round 8 — Age display */}
+      <Html position={[0, -1.6, 0]} center style={{ pointerEvents: "none" }}>
+        <TravelerAgeLabel gamma={gamma} />
+      </Html>
     </group>
   );
 }
@@ -351,33 +372,55 @@ function SpacetimeGrid({ beta }: { beta: number }) {
   );
 }
 
-// Stars that streak at relativistic speeds
+// Stars that streak at relativistic speeds with Doppler color shift (Round 6)
 function StreakingStars({ beta }: { beta: number }) {
-  const { positions, velocities } = useMemo(() => {
+  const { positions, velocities, colors } = useMemo(() => {
     const N = 300;
     const pos = new Float32Array(N * 3);
     const vel = new Float32Array(N);
+    const col = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) {
       pos[i * 3] = (Math.random() - 0.5) * 30;
       pos[i * 3 + 1] = (Math.random() - 0.5) * 12;
       pos[i * 3 + 2] = (Math.random() - 0.5) * 20;
       vel[i] = 0.5 + Math.random() * 0.5;
+      // Default white
+      col[i * 3] = 0.63;
+      col[i * 3 + 1] = 0.77;
+      col[i * 3 + 2] = 1.0;
     }
-    return { positions: pos, velocities: vel };
+    return { positions: pos, velocities: vel, colors: col };
   }, []);
 
   const pointsRef = useRef<THREE.Points>(null);
 
   useFrame(({ clock }) => {
     if (!pointsRef.current) return;
-    const attr = pointsRef.current.geometry.getAttribute("position") as THREE.BufferAttribute;
-    const elapsed = clock.getElapsedTime();
+    const posAttr = pointsRef.current.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const colAttr = pointsRef.current.geometry.getAttribute("color") as THREE.BufferAttribute;
     const streakSpeed = beta * 0.15;
     for (let i = 0; i < velocities.length; i++) {
-      attr.array[i * 3] -= streakSpeed * velocities[i];
-      if (attr.array[i * 3] < -15) attr.array[i * 3] = 15;
+      posAttr.array[i * 3] -= streakSpeed * velocities[i];
+      if (posAttr.array[i * 3] < -15) posAttr.array[i * 3] = 15;
+      // Round 6 — Doppler shift: stars moving toward viewer (negative x velocity) are blue, away are red
+      const vx = -streakSpeed * velocities[i];
+      if (beta > 0.05) {
+        const shift = Math.min(Math.abs(vx) * 20, 1.0);
+        if (vx < 0) {
+          // Moving toward — blueshift
+          colAttr.array[i * 3] = 0.4 - shift * 0.3;
+          colAttr.array[i * 3 + 1] = 0.6 + shift * 0.2;
+          colAttr.array[i * 3 + 2] = 1.0;
+        } else {
+          // Moving away — redshift
+          colAttr.array[i * 3] = 1.0;
+          colAttr.array[i * 3 + 1] = 0.5 - shift * 0.3;
+          colAttr.array[i * 3 + 2] = 0.4 - shift * 0.3;
+        }
+      }
     }
-    attr.needsUpdate = true;
+    posAttr.needsUpdate = true;
+    colAttr.needsUpdate = true;
   });
 
   const size = beta > 0.5 ? 0.06 : 0.04;
@@ -386,9 +429,164 @@ function StreakingStars({ beta }: { beta: number }) {
     <points ref={pointsRef}>
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
       </bufferGeometry>
-      <pointsMaterial color="#a0c4ff" size={size} transparent opacity={0.4 + beta * 0.4} sizeAttenuation />
+      <pointsMaterial vertexColors size={size} transparent opacity={0.4 + beta * 0.4} sizeAttenuation />
     </points>
+  );
+}
+
+// Round 5 — Reference cubes for Lorentz contraction comparison
+function ContractionCubes({ gamma }: { gamma: number }) {
+  const contractFactor = Math.max(1 / gamma, 0.05);
+  return (
+    <group>
+      {/* Earth reference cube — fixed size */}
+      <group position={[-4, -2.5, 0]}>
+        <mesh>
+          <boxGeometry args={[0.8, 0.8, 0.8]} />
+          <meshBasicMaterial color="#4a90d9" wireframe />
+        </mesh>
+        <Html position={[0, -0.6, 0]} center style={{ pointerEvents: "none" }}>
+          <div style={{ color: "#4a90d9", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
+            Rest frame
+          </div>
+        </Html>
+      </group>
+      {/* Traveler contracted cube — scaled along X by 1/gamma */}
+      <group position={[4, -2.5, 0]}>
+        <mesh scale={[contractFactor, 1, 1]}>
+          <boxGeometry args={[0.8, 0.8, 0.8]} />
+          <meshBasicMaterial color="#f59e0b" wireframe />
+        </mesh>
+        <Html position={[0, -0.6, 0]} center style={{ pointerEvents: "none" }}>
+          <div style={{ color: "#f59e0b", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
+            Contracted (1/{"\u03B3"})
+          </div>
+        </Html>
+      </group>
+    </group>
+  );
+}
+
+// Round 7 — Speed of light indicator line
+function SpeedOfLightIndicator() {
+  const points = useMemo(() => [
+    new THREE.Vector3(10, -2, -6),
+    new THREE.Vector3(10, -2, 6),
+  ], []);
+  const dashPoints = useMemo(() => {
+    const segs: THREE.Vector3[][] = [];
+    for (let z = -6; z <= 5; z += 1) {
+      if (z % 2 === 0) {
+        segs.push([
+          new THREE.Vector3(10, -2, z),
+          new THREE.Vector3(10, -2, z + 1),
+        ]);
+      }
+    }
+    return segs;
+  }, []);
+
+  return (
+    <group>
+      {dashPoints.map((seg, i) => (
+        <Line key={i} points={seg} color="#ef4444" lineWidth={0.8} transparent opacity={0.5} />
+      ))}
+      <Html position={[10, -1.2, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{ color: "#ef4444", fontSize: "9px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(1,1,8,0.8)", padding: "1px 6px", borderRadius: "3px", whiteSpace: "nowrap", border: "1px solid #ef444430" }}>
+          c (speed of light)
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+// Round 8 — Earth age label (accumulates at normal rate)
+function EarthAgeLabel() {
+  const ref = useRef<HTMLDivElement>(null);
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      const t = clock.getElapsedTime();
+      // Scale: 1 real second = 0.1 simulated years for readability
+      const age = (t * 0.1).toFixed(2);
+      ref.current.textContent = `Age: ${age} yr`;
+    }
+  });
+  return (
+    <div ref={ref} style={{
+      color: "#4a90d9",
+      fontSize: "9px",
+      fontFamily: "'JetBrains Mono', monospace",
+      background: "rgba(1,1,8,0.85)",
+      padding: "1px 6px",
+      borderRadius: "3px",
+      whiteSpace: "nowrap",
+      fontVariantNumeric: "tabular-nums",
+    }}>
+      Age: 0.00 yr
+    </div>
+  );
+}
+
+// Round 8 — Traveler age label (accumulates slower by gamma)
+function TravelerAgeLabel({ gamma }: { gamma: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      const t = clock.getElapsedTime();
+      const age = (t * 0.1 / gamma).toFixed(2);
+      ref.current.textContent = `Age: ${age} yr`;
+    }
+  });
+  return (
+    <div ref={ref} style={{
+      color: "#f59e0b",
+      fontSize: "9px",
+      fontFamily: "'JetBrains Mono', monospace",
+      background: "rgba(1,1,8,0.85)",
+      padding: "1px 6px",
+      borderRadius: "3px",
+      whiteSpace: "nowrap",
+      fontVariantNumeric: "tabular-nums",
+    }}>
+      Age: 0.00 yr
+    </div>
+  );
+}
+
+// Round 9 — Distance ruler with markers at 0, 5, 10 light-years
+function DistanceRuler() {
+  const rulerY = -3;
+  const markers = [0, 5, 10];
+  const rulerPoints = useMemo(() => [
+    new THREE.Vector3(-12, rulerY, 7),
+    new THREE.Vector3(12, rulerY, 7),
+  ], []);
+
+  return (
+    <group>
+      <Line points={rulerPoints} color="#475569" lineWidth={1} transparent opacity={0.5} />
+      {markers.map((ly) => {
+        const x = -12 + (ly / 10) * 24;
+        return (
+          <group key={ly}>
+            <Line
+              points={[new THREE.Vector3(x, rulerY - 0.2, 7), new THREE.Vector3(x, rulerY + 0.2, 7)]}
+              color="#475569"
+              lineWidth={1}
+              transparent
+              opacity={0.5}
+            />
+            <Html position={[x, rulerY - 0.5, 7]} center style={{ pointerEvents: "none" }}>
+              <div style={{ color: "#64748b", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
+                {ly} ly
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+    </group>
   );
 }
 
