@@ -247,61 +247,12 @@ export function DilationTable() {
           </select>
         </div>
 
-        {/* Compact data rows */}
-        <div style={styles.dataList}>
-          {allBodies.map((b) => {
-            const relDiff = (b.dilation_factor - refFactor) * 86_400 * 1e6;
-            const isRef = b.name === referenceBody;
-            const isHovered = hoveredBody === b.name;
-            const color = BODY_COLORS[b.name] || "#94a3b8";
-            const vEsc = computeEscapeVelocity(b);
-            // Compute logSeverity for bar width (same as chart)
-            const shift = 1 - b.dilation_factor;
-            const logSeverity = shift > 0 ? Math.max(Math.log10(shift) + 10, 0) / 10 : 0;
-            return (
-              <div key={b.name} style={{
-                ...styles.dataRow,
-                ...(isRef ? styles.refRow : {}),
-                ...(isHovered ? styles.dataRowHover : {}),
-              }}
-                onPointerEnter={() => setHoveredBody(b.name)}
-                onPointerLeave={() => setHoveredBody(null)}
-              >
-                <div style={styles.bodyHeader}>
-                  <span style={{ color }}>{"\u25CF"} {b.name}</span>
-                  <span style={styles.dilationVal}>
-                    {b.dilation_factor < 0.999
-                      ? b.dilation_factor.toFixed(6)
-                      : `1-${(1 - b.dilation_factor).toExponential(2)}`}
-                  </span>
-                </div>
-                <div style={styles.bodyDetail}>
-                  <span>Lost/yr: {formatSecondsLost(b.seconds_lost_per_year)}</span>
-                  <span style={{ color: relDiff > 0 ? "#34d399" : relDiff < 0 ? "#f87171" : "#94a3b8" }}>
-                    {isRef ? "REF" : formatMicroseconds(relDiff) + "/day"}
-                  </span>
-                </div>
-                {/* Escape velocity — only on hover */}
-                {isHovered && (
-                  <div style={styles.bodyDetail}>
-                    <span>v_esc: {formatEscapeVelocity(vEsc)}</span>
-                  </div>
-                )}
-                {/* Description on hover */}
-                {isHovered && BODY_DESCRIPTIONS[b.name] && (
-                  <div style={styles.bodyDesc}>{BODY_DESCRIPTIONS[b.name]}</div>
-                )}
-                {/* Visual severity bar — unified with chart logSeverity */}
-                <div style={styles.barBg}>
-                  <div style={{
-                    ...styles.barFill,
-                    width: `${Math.min(logSeverity * 100, 100)}%`,
-                    background: color,
-                  }} />
-                </div>
-              </div>
-            );
-          })}
+        {/* Why This Matters card */}
+        <div style={{ background: "#0f172a", borderRadius: "6px", padding: "8px", borderLeft: "3px solid #3b82f6" }}>
+          <div style={{ fontSize: "10px", fontWeight: 600, color: "#94a3b8", marginBottom: "4px", letterSpacing: "0.5px" }}>Why This Matters</div>
+          <div style={{ fontSize: "10px", color: "#e2e8f0", lineHeight: 1.5 }}>
+            GPS satellites orbit 20,200 km up {"\u2014"} weaker gravity means their clocks tick +38.6 {"\u03BCs"}/day faster. Without relativistic correction, GPS drifts {"\u223C"}10 km/day. Every body on this chart has a similar time-gravity tradeoff.
+          </div>
         </div>
 
         {/* Time Drift per Day — user-selectable */}
@@ -342,6 +293,62 @@ export function DilationTable() {
             );
           })()}
         </div>
+
+        {/* Compact data rows */}
+        <div style={styles.dataList}>
+          {allBodies.map((b) => {
+            const relDiff = (b.dilation_factor - refFactor) * 86_400 * 1e6;
+            const isRef = b.name === referenceBody;
+            const isHovered = hoveredBody === b.name;
+            const color = BODY_COLORS[b.name] || "#94a3b8";
+            const vEsc = computeEscapeVelocity(b);
+            // Compute logSeverity for bar width (same as chart)
+            const shift = 1 - b.dilation_factor;
+            const logSeverity = shift > 0 ? Math.max(Math.log10(shift) + 10, 0) / 10 : 0;
+            return (
+              <div key={b.name} style={{
+                ...styles.dataRow,
+                ...(isRef ? styles.refRow : {}),
+                ...(isHovered ? styles.dataRowHover : {}),
+              }}
+                onPointerEnter={() => setHoveredBody(b.name)}
+                onPointerLeave={() => setHoveredBody(null)}
+              >
+                <div style={styles.bodyHeader}>
+                  <span style={{ color }}>{"\u25CF"} {b.name}</span>
+                  <span style={styles.dilationVal}>
+                    {b.dilation_factor < 0.999
+                      ? b.dilation_factor.toFixed(6)
+                      : `1-${(1 - b.dilation_factor).toExponential(2)}`}
+                  </span>
+                </div>
+                <div style={styles.bodyDetail}>
+                  <span>Lost/yr: {formatSecondsLost(b.seconds_lost_per_year)}</span>
+                  <span style={{ color: relDiff > 0 ? "#34d399" : relDiff < 0 ? "#f87171" : "#94a3b8" }}>
+                    {isRef ? "REF" : formatMicroseconds(relDiff) + "/day"}
+                  </span>
+                </div>
+                {/* Escape velocity — always shown */}
+                <div style={styles.bodyDetail}>
+                  <span>v_esc: {formatEscapeVelocity(vEsc)}</span>
+                </div>
+                {/* Description on hover */}
+                {isHovered && BODY_DESCRIPTIONS[b.name] && (
+                  <div style={styles.bodyDesc}>{BODY_DESCRIPTIONS[b.name]}</div>
+                )}
+                {/* Visual severity bar — unified with chart logSeverity */}
+                <div style={styles.barBg}>
+                  <div style={{
+                    ...styles.barFill,
+                    width: `${Math.min(logSeverity * 100, 100)}%`,
+                    background: color,
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
       </div>
     </div>
   );

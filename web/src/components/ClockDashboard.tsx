@@ -117,6 +117,14 @@ export function ClockDashboard() {
             Each clock ticks at its own rate {"\u2014"} click any clock for details
           </text>
 
+          {/* Relationship chain — moved here from bottom */}
+          <g opacity={0.8}>
+            <text x={320} y={55} textAnchor="middle" fill="#94a3b8" fontSize={10}>
+              UTC {"\u2192"} TAI (+37s) {"\u2192"} TT (+32.184s) {"\u2192"} TCG ({"\u00D7"}1+L_G) | TCB ({"\u00D7"}1+L_B)
+            </text>
+          </g>
+          <line x1={120} y1={59} x2={520} y2={59} stroke="#1e293b" strokeWidth={0.5} />
+
           {/* Tiered clock layout */}
           {tierClocks.map((clocks, tierIdx) => {
             const tierY = tierYPositions[tierIdx];
@@ -226,12 +234,6 @@ export function ClockDashboard() {
             );
           })}
 
-          {/* Relationship chain */}
-          <g opacity={0.5}>
-            <text x={320} y={576} textAnchor="middle" fill="#94a3b8" fontSize={10}>
-              UTC {"\u2192"} TAI (+37s) {"\u2192"} TT (+32.184s) {"\u2192"} TCG ({"\u00D7"}1+L_G) | TCB ({"\u00D7"}1+L_B)
-            </text>
-          </g>
         </svg>
       </div>
 
@@ -241,11 +243,11 @@ export function ClockDashboard() {
 
         {/* Selected clock detail card */}
         {selInfo && (
-          <div style={{ ...styles.detailCard, borderColor: selInfo.color + "50" }}>
+          <div style={{ ...styles.detailCard, borderColor: selInfo.color + "50", borderLeft: `3px solid ${selInfo.color}`, background: `${selInfo.color}0D` }}>
             <div style={{ ...styles.detailLabel, color: selInfo.color }}>{selInfo.label} {"\u2014"} {selInfo.full}</div>
             <div style={styles.detailWhy}>{selInfo.why}</div>
             <div style={styles.detailUse}><strong>Used for:</strong> {selInfo.use}</div>
-            <div style={styles.detailWhyYouCare}><strong>Why you care:</strong> {selInfo.whyYouCare}</div>
+            <div style={{ ...styles.detailWhyYouCare, fontStyle: "normal", fontWeight: 700 }}><strong>Why you care:</strong> {selInfo.whyYouCare}</div>
           </div>
         )}
 
@@ -267,6 +269,9 @@ export function ClockDashboard() {
         {/* Interactive drift duration slider */}
         <div style={styles.rateCard}>
           <div style={styles.infoTitle}>Drift Calculator</div>
+          <div style={{ fontSize: "9px", color: "#64748b", marginBottom: "2px", fontStyle: "italic" }}>
+            Shows accumulated time offset over mission duration
+          </div>
           <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "4px" }}>
             Duration: {driftDuration}s ({(driftDuration / 60).toFixed(0)} min)
           </div>
@@ -287,6 +292,9 @@ export function ClockDashboard() {
               </div>
             );
           })}
+          <div style={{ fontSize: "10px", color: "#14b8a6", marginTop: "4px", borderTop: "1px solid #1e293b", paddingTop: "4px" }}>
+            GPS-equivalent drift: {(driftDuration * 15.505 / 1e9 * 3e8 / 1000).toFixed(1)} km
+          </div>
         </div>
 
         <div style={styles.rateCard}>

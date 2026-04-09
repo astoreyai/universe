@@ -183,24 +183,12 @@ export function BlackHoleView() {
 
         <div style={{ ...styles.results, borderLeft: `3px solid ${dilation > 0.8 ? "#34d399" : dilation > 0.5 ? "#fbbf24" : "#ef4444"}` }}>
           <div style={styles.resultRow}>
-            <span>Schwarzschild radius</span>
-            <span>{(rs / 1000).toFixed(1)} km</span>
-          </div>
-          <div style={styles.resultRow}>
-            <span>Observer distance</span>
-            <span>{((observerR * rs) / 1000).toFixed(1)} km</span>
-          </div>
-          <div style={styles.resultRow}>
             <span>d{"\u03C4"}/dt</span>
             <span
               style={{ color: dilation < 0.5 ? "#ef4444" : "#34d399" }}
             >
               {dilation.toFixed(6)}
             </span>
-          </div>
-          <div style={styles.resultRow}>
-            <span>Lost/year vs {"\u221E"}</span>
-            <span>{formatLarge(secondsLost)}</span>
           </div>
           <div style={styles.resultRow}>
             <span>Time factor</span>
@@ -210,18 +198,33 @@ export function BlackHoleView() {
                 : "\u221E (frozen)"}
             </span>
           </div>
-          {spin > 0 && (
-            <div style={styles.resultRow}>
-              <span>Ergosphere (eq.)</span>
-              <span>{((2 * gm) / C2 / 1000).toFixed(1)} km</span>
-            </div>
-          )}
           <div style={styles.resultRow}>
             <span>Escape velocity</span>
             <span style={{ color: "#a78bfa" }}>
               {observerR > 1 ? `${Math.sqrt(1 / observerR).toFixed(4)} c` : "> c"}
             </span>
           </div>
+          {spin > 0 && (
+            <div style={styles.resultRow}>
+              <span>Ergosphere (eq.)</span>
+              <span>{((2 * gm) / C2 / 1000).toFixed(1)} km</span>
+            </div>
+          )}
+          <details style={{ fontSize: "11px", color: "#94a3b8", cursor: "pointer" }}>
+            <summary>Schwarzschild Details</summary>
+            <div style={{ ...styles.resultRow, marginTop: "4px" }}>
+              <span>Schwarzschild radius</span>
+              <span>{(rs / 1000).toFixed(1)} km</span>
+            </div>
+            <div style={styles.resultRow}>
+              <span>Observer distance</span>
+              <span>{((observerR * rs) / 1000).toFixed(1)} km</span>
+            </div>
+            <div style={styles.resultRow}>
+              <span>Lost/year vs {"\u221E"}</span>
+              <span>{formatLarge(secondsLost)}</span>
+            </div>
+          </details>
         </div>
 
         {/* Formula card */}
@@ -316,6 +319,7 @@ export function BlackHoleView() {
               const iscoX = 30 + ((iscoRs - 1.05) / 19) * 225;
               return iscoX >= 30 && iscoX <= 255 ? (
                 <g>
+                  <title>ISCO = Innermost Stable Circular Orbit. Below this radius, matter cannot orbit stably — it spirals into the black hole.</title>
                   <line
                     x1={iscoX}
                     y1={10}
@@ -478,6 +482,13 @@ function BlackHoleScene({
 
       {/* Round 8 — Photon sphere orbit with orbiting photon dot at 1.5rs */}
       <PhotonSphereOrbit scale={SCALE} />
+
+      {/* Lensing explanation label */}
+      <Html position={[0, -2, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{ color: "#64748b", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.85)", padding: "3px 8px", borderRadius: "4px", whiteSpace: "nowrap", maxWidth: "320px", textAlign: "center" }}>
+          Light bends near the event horizon — the distorted background is gravitational lensing (Einstein ring effect)
+        </div>
+      </Html>
 
       {/* Round 9 — Warning label when observer approaches event horizon */}
       {observerRs < 2 && (
