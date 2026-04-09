@@ -138,6 +138,13 @@ export function SolarSystemView() {
 
           <AsteroidBelt />
 
+          {/* Scale indicator at 1 AU */}
+          <Html position={[AU, -1.5, 0]} center style={{ pointerEvents: "none" }}>
+            <div style={{ color: "#334155", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", borderTop: "1px solid #334155", paddingTop: "2px", textAlign: "center", width: "60px" }}>
+              1 AU
+            </div>
+          </Html>
+
           <DreiStars radius={200} depth={150} count={5000} factor={3} saturation={0.1} fade speed={0.5} />
 
           <EffectComposer>
