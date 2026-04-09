@@ -17,18 +17,19 @@ const PLANETS: [string, number, number, number, string, boolean, number, string]
   ["Saturn", 9.537, 29.46, 58232, "#d4b87a", true, 2.49, "saturn.jpg"],
 ];
 
-// Major moons: [name, parentPlanet, orbitalRadius_km, radius_km, color]
-const MOONS: [string, string, number, number, string][] = [
-  ["Moon", "Earth", 384400, 1737, "#c0c0c0"],
-  ["Phobos", "Mars", 9376, 11, "#8a7d6b"],
-  ["Deimos", "Mars", 23460, 6, "#8a7d6b"],
-  ["Io", "Jupiter", 421700, 1822, "#c8a432"],
-  ["Europa", "Jupiter", 671100, 1561, "#b8a888"],
-  ["Ganymede", "Jupiter", 1070400, 2634, "#888078"],
-  ["Callisto", "Jupiter", 1882700, 2410, "#555048"],
-  ["Titan", "Saturn", 1221870, 2575, "#d4a030"],
-  ["Enceladus", "Saturn", 238020, 252, "#f0f0f0"],
-  ["Rhea", "Saturn", 527040, 764, "#c0b8a8"],
+// Major moons: [name, parentPlanet, orbitalRadius_km, radius_km, color, inclination_deg]
+// Inclination sources: Wikipedia/NASA NSSDCA (to parent equator except Moon/Callisto to ecliptic)
+const MOONS: [string, string, number, number, string, number][] = [
+  ["Moon", "Earth", 384400, 1737, "#c0c0c0", 5.15],
+  ["Phobos", "Mars", 9376, 11, "#8a7d6b", 1.09],
+  ["Deimos", "Mars", 23460, 6, "#8a7d6b", 0.93],
+  ["Io", "Jupiter", 421700, 1822, "#c8a432", 0.05],
+  ["Europa", "Jupiter", 671100, 1561, "#b8a888", 0.47],
+  ["Ganymede", "Jupiter", 1070400, 2634, "#888078", 0.20],
+  ["Callisto", "Jupiter", 1882700, 2410, "#555048", 2.02],
+  ["Titan", "Saturn", 1221870, 2575, "#d4a030", 0.35],
+  ["Enceladus", "Saturn", 238020, 252, "#f0f0f0", 0.009],
+  ["Rhea", "Saturn", 527040, 764, "#c0b8a8", 0.35],
 ];
 
 const BASE = import.meta.env.BASE_URL;
@@ -312,8 +313,8 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onH
       {d.rings && <SaturnRings size={sz} />}
 
       {/* Moons */}
-      {showMoons && moons.map(([mName, _, mOrbit, mRad, mColor]) => (
-        <MoonBody key={mName} name={mName} orbitR={mOrbit} radius={mRad} color={mColor} parentR={sz} />
+      {showMoons && moons.map(([mName, _, mOrbit, mRad, mColor, mIncl]) => (
+        <MoonBody key={mName} name={mName} orbitR={mOrbit} radius={mRad} color={mColor} parentR={sz} inclination={mIncl} />
       ))}
 
       {/* Selection ring */}
@@ -344,33 +345,37 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onH
 
 // ─── Moon ───────────────────────────────────────────────────────────────────
 
-function MoonBody({ name, orbitR, radius, color, parentR }: { name: string; orbitR: number; radius: number; color: string; parentR: number }) {
+function MoonBody({ name, orbitR, radius, color, parentR, inclination }: {
+  name: string; orbitR: number; radius: number; color: string; parentR: number; inclination: number;
+}) {
   const ref = useRef<THREE.Group>(null);
-  // Log-scale moon radius so large moons (Ganymede 2634km) are visibly bigger than tiny ones (Deimos 6km)
   const moonR = Math.max(Math.log10(radius + 1) * 0.04, MIN_MOON_R);
   const orbitSceneR = Math.max(orbitR * MOON_ORBIT_SCALE + parentR * 1.3, parentR + MIN_MOON_ORBIT);
+  // Amplify inclination for visibility (real values are tiny — Moon's 5.15° is the largest)
+  const inclRad = (inclination * Math.PI) / 180 * 3; // 3x amplification
 
   const moonTex = useLoader(THREE.TextureLoader, name === "Moon" ? `${BASE}textures/moon.jpg` : `${BASE}textures/mercury.jpg`);
 
   useFrame(({ clock }) => {
     if (ref.current) {
-      // Kepler-proportional speed: closer moons orbit faster (period ∝ r^1.5)
-      const periodFactor = Math.pow(orbitR / 400000, 1.5); // normalize to Moon's orbit
+      const periodFactor = Math.pow(orbitR / 400000, 1.5);
       const speed = 1.5 / Math.max(periodFactor, 0.01);
       const t = clock.getElapsedTime() * speed;
       ref.current.position.x = Math.cos(t) * orbitSceneR;
       ref.current.position.z = Math.sin(t) * orbitSceneR;
-      ref.current.position.y = Math.sin(t * 0.7) * orbitSceneR * 0.08;
+      ref.current.position.y = Math.sin(t) * Math.sin(inclRad) * orbitSceneR;
     }
   });
 
   return (
     <group>
-      {/* Moon orbit */}
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[orbitSceneR - 0.005, orbitSceneR + 0.005, 64]} />
-        <meshBasicMaterial color="#334155" transparent opacity={0.15} side={THREE.DoubleSide} />
-      </mesh>
+      {/* Moon orbit ring — tilted by inclination */}
+      <group rotation={[inclRad, 0, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[orbitSceneR - 0.005, orbitSceneR + 0.005, 64]} />
+          <meshBasicMaterial color="#334155" transparent opacity={0.15} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
       {/* Moon body */}
       <group ref={ref}>
         <mesh>
