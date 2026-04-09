@@ -156,9 +156,9 @@ export function SolarSystemView() {
             <OrbitRing key={`o-${p.name}`} r={p.au * AU} incl={p.incl} active={selected === p.name} />
           ))}
 
-          {/* Round 8 — Orbit trail for selected planet */}
+          {/* Round 8 — Orbit trails for all planets */}
           {planets.map((p) => (
-            selected === p.name && <OrbitTrail key={`trail-${p.name}`} planet={p} timeSpeed={paused ? 0 : timeSpeed} planetPositions={planetPositions} />
+            <OrbitTrail key={`trail-${p.name}`} planet={p} timeSpeed={paused ? 0 : timeSpeed} planetPositions={planetPositions} trailOpacity={selected === p.name ? 1.0 : 0.15} />
           ))}
 
           <AsteroidBelt />
@@ -244,9 +244,11 @@ export function SolarSystemView() {
               {MOONS.filter((m) => m[1] === selP.name).length > 0 && (
                 <Row l="Moons" v={MOONS.filter((m) => m[1] === selP.name).map((m) => m[0]).join(", ")} />
               )}
-              {/* Relativity note */}
-              <div style={{ fontSize: "10px", color: "#a78bfa", marginTop: "6px", fontStyle: "italic", lineHeight: "1.4", borderLeft: "2px solid #a78bfa30", paddingLeft: "6px" }}>
-                {getRelativityNote(selP.name)}
+              {/* Relativity note — distinct sub-card */}
+              <div style={{ background: "#0f172a", borderLeft: "3px solid #a78bfa", padding: "6px 8px", borderRadius: "4px", marginTop: "6px" }}>
+                <div style={{ fontSize: "10px", color: "#a78bfa", fontStyle: "italic", lineHeight: "1.4" }}>
+                  {getRelativityNote(selP.name)}
+                </div>
               </div>
               {/* Round 9 — Dwarf planet label for Pluto */}
               {selP.name === "Pluto" && (
@@ -286,8 +288,8 @@ export function SolarSystemView() {
           if (!m) return null;
           const [mName, mParent, mOrbit, mRad, _, mIncl] = m;
           return (
-            <div style={{ ...S.info, borderLeft: "3px solid #a78bfa" }}>
-              <div style={{ ...S.infoName, fontSize: "14px" }}>{mName}</div>
+            <div style={S.info}>
+              <div style={S.infoName}>{mName}</div>
               <div style={{ fontSize: "10px", color: "#94a3b8", marginBottom: "4px" }}>Moon of {mParent}</div>
               <div style={S.infoD}>
                 <Row l="Diameter" v={`${(mRad * 2).toLocaleString()} km`} />
@@ -744,10 +746,11 @@ function KuiperBelt() {
 
 // ─── Round 8 — Orbit trail ────────────────────────────────────────────────
 
-function OrbitTrail({ planet, timeSpeed, planetPositions }: {
+function OrbitTrail({ planet, timeSpeed, planetPositions, trailOpacity = 1.0 }: {
   planet: PData;
   timeSpeed: number;
   planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
+  trailOpacity?: number;
 }) {
   const trailRef = useRef<THREE.Group>(null);
   const TRAIL_COUNT = 20;
@@ -773,7 +776,7 @@ function OrbitTrail({ planet, timeSpeed, planetPositions }: {
   return (
     <group ref={trailRef}>
       {Array.from({ length: TRAIL_COUNT }, (_, i) => {
-        const opacity = 0.6 * (1 - (i + 1) / TRAIL_COUNT);
+        const opacity = 0.6 * (1 - (i + 1) / TRAIL_COUNT) * trailOpacity;
         return (
           <mesh key={i}>
             <sphereGeometry args={[0.04, 6, 6]} />

@@ -149,11 +149,6 @@ export function TwinParadoxView() {
           />
         </div>
 
-        {/* Gamma display */}
-        <div style={{ textAlign: "center", fontSize: "20px", color: "#8b5cf6", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", padding: "4px 0" }}>
-          {"\u03B3"} = {results.gamma < 100 ? results.gamma.toFixed(4) : results.gamma.toExponential(3)}
-        </div>
-
         {/* Results */}
         <div style={styles.results}>
           <div style={{ ...styles.resultRow, color: "#8b5cf6" }}>
@@ -199,7 +194,8 @@ export function TwinParadoxView() {
 
         {/* Why This Matters */}
         <div style={styles.infoCard}>
-          The twin paradox is real — verified by flying atomic clocks on aircraft (Hafele-Keating, 1971) and by GPS satellite corrections every day. Astronaut Scott Kelly aged 5 milliseconds less than his twin Mark during 340 days on the ISS.
+          <p style={{ margin: "0 0 6px 0" }}>The twin paradox is real — verified by flying atomic clocks on aircraft (Hafele-Keating, 1971) and by GPS satellite corrections every day. Astronaut Scott Kelly aged 5 milliseconds less than his twin Mark during 340 days on the ISS.</p>
+          <p style={{ margin: 0 }}>Note: This visualization assumes instantaneous turnaround. In reality, the traveling twin must accelerate to reverse direction — this acceleration breaks the symmetry and resolves the &apos;paradox.&apos; The twin who felt the g-forces is the one who ages less.</p>
         </div>
       </div>
     </div>
@@ -633,7 +629,7 @@ function TimeBar({ label, years, max, color }: { label: string; years: number; m
     <div style={styles.timelineRow}>
       <div style={styles.timelineLabel}>{label}</div>
       <div style={styles.timelineBar}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "3px", transition: "width 0.3s" }} />
+        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "3px", transition: "width 0.5s ease" }} />
       </div>
       <div style={styles.timelineValue}>{years.toFixed(2)} yr</div>
     </div>

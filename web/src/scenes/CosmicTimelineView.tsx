@@ -164,6 +164,7 @@ export function CosmicTimelineView() {
             showHubble={showHubble}
             showParticles={showParticles}
             showLabels={showLabels}
+            hubbleRadius={sliceData.comoving}
           />
           <DreiStars radius={80} depth={60} count={7000} factor={3} saturation={0.05} fade speed={0.4} />
           <EffectComposer>
@@ -218,6 +219,12 @@ export function CosmicTimelineView() {
           <div style={styles.sliderTicks}>
             <span>Big Bang</span>
             <span>Now</span>
+          </div>
+          <div style={{ marginTop: "6px" }}>
+            <div style={{ width: (1 / (1 + sliceZ)) * 100 + "%", height: "4px", background: "#f59e0b", borderRadius: "2px", transition: "width 0.3s" }} />
+            <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px" }}>
+              Scale factor a = {sliceData.a.toFixed(4)} — universe was {((1 / (1 + sliceZ)) * 100).toFixed(1)}% of current size
+            </div>
           </div>
         </div>
 
@@ -323,6 +330,7 @@ export function CosmicTimelineView() {
         {/* Milestones table */}
         <div style={styles.tableSection}>
           <div style={styles.paramTitle}>Redshift Milestones</div>
+          <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "4px" }}>Click any row to jump to that epoch {"\u2192"}</div>
           <table style={styles.table}>
             <thead>
               <tr>
@@ -333,20 +341,25 @@ export function CosmicTimelineView() {
               </tr>
             </thead>
             <tbody>
-              {milestones.map((m) => (
+              {milestones.map((m) => {
+                const isClosest = milestones.reduce((best, curr) =>
+                  Math.abs(curr.age - epochAge) < Math.abs(best.age - epochAge) ? curr : best
+                ).z === m.z;
+                return (
                 <tr key={m.z} onClick={() => setEpochAge(m.age)}
                   className="milestone-row"
-                  style={{ cursor: "pointer", transition: "background 0.15s" }}
+                  style={{ cursor: "pointer", transition: "background 0.15s", background: isClosest ? "#1e293b" : "transparent" }}
                   title={`Jump to z=${m.z} (${m.age.toFixed(2)} Gyr)`}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1e293b"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isClosest ? "#1e293b" : "transparent"; }}
                 >
                   <td style={styles.td}>{m.z}</td>
                   <td style={styles.tdMono}>{m.a}</td>
                   <td style={styles.tdMono}>{m.lookback.toFixed(1)}</td>
                   <td style={styles.tdMono}>{m.comoving.toFixed(1)}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -410,12 +423,14 @@ function CosmicScene({
   showHubble,
   showParticles,
   showLabels,
+  hubbleRadius,
 }: {
   epochAge: number;
   sliceZ: number;
   showHubble: boolean;
   showParticles: boolean;
   showLabels: boolean;
+  hubbleRadius: number;
 }) {
   return (
     <group>
@@ -424,7 +439,7 @@ function CosmicScene({
       <CosmicTimeAxis />
       <EpochSlicePlane epochAge={epochAge} sliceZ={sliceZ} />
       {showParticles && <ParticleField />}
-      {showHubble && <HubbleSphere />}
+      {showHubble && <HubbleSphere epochAge={epochAge} hubbleRadius={hubbleRadius} />}
       <ObserverMarker />
       {/* Round 8 — Observable Universe Edge label at z=1100 */}
       {showLabels && <ObservableUniverseLabel />}
@@ -807,7 +822,7 @@ function ParticleField() {
 
 // ─── Hubble sphere ─────────────────────────────────────────────────────────
 
-function HubbleSphere() {
+function HubbleSphere({ epochAge, hubbleRadius }: { epochAge: number; hubbleRadius: number }) {
   const geometry = useMemo(() => {
     const N = 200;
     const profile: THREE.Vector2[] = [];
@@ -859,7 +874,7 @@ function HubbleSphere() {
           whiteSpace: "nowrap",
           border: "1px solid #06b6d430",
         }}>
-          Hubble Sphere — beyond here, recession &gt; c
+          Hubble Sphere at {epochAge.toFixed(1)} Gyr: {hubbleRadius.toFixed(2)} Gly — beyond here, recession &gt; c
         </div>
       </Html>
     </group>
