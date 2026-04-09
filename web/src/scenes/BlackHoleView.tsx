@@ -715,7 +715,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sliderInput: {
     width: "100%",
-    accentColor: "#3b82f6",
+    accentColor: "#ef4444",
   },
   results: {
     background: "#0f172a",

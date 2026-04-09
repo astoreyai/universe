@@ -128,7 +128,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "24px",
     fontWeight: 700,
     letterSpacing: "6px",
-    background: "linear-gradient(90deg, #60a5fa, #a78bfa, #60a5fa)",
+    background: "linear-gradient(90deg, #3b82f6 0%, #60a5fa 20%, #a78bfa 50%, #60a5fa 80%, #3b82f6 100%)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
     marginBottom: "2px",

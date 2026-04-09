@@ -909,7 +909,7 @@ function fmt(s: number): string {
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
 const S: Record<string, React.CSSProperties> = {
-  container: { display: "flex", height: "calc(100vh - 120px)", gap: 0 },
+  container: { display: "flex", height: "calc(100vh - 130px)", gap: 0 },
   canvas: { flex: 1, borderRadius: "8px", overflow: "hidden", border: "1px solid #1e293b" },
   panel: { width: "280px", background: "rgba(17,24,39,0.85)", backdropFilter: "blur(12px)", border: "1px solid #1e293b", borderRadius: "8px", padding: "14px", marginLeft: "10px", overflow: "auto", display: "flex", flexDirection: "column", gap: "12px" },
   panelHdr: { fontSize: "12px", fontWeight: 600, color: "#f59e0b", letterSpacing: "1.5px", textTransform: "uppercase" },

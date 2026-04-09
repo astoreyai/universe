@@ -726,6 +726,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontSize: "10px",
     fontFamily: "inherit",
+    transition: "all 0.2s ease",
   },
   presetBtnActive: {
     background: "#1e293b",

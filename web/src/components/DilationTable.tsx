@@ -402,8 +402,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   dataRowHover: {
     boxShadow: "0 2px 12px rgba(148,163,184,0.15)",
-    transform: "scale(1.02)",
     background: "#1e293b",
+    borderLeft: "2px solid #60a5fa",
   },
   refRow: { background: "#1e293b30", border: "1px solid #3b82f640" },
   bodyHeader: {
