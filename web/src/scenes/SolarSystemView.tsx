@@ -104,7 +104,6 @@ export function SolarSystemView() {
   const [timeSpeed, setTimeSpeed] = useState(0.5);
   const [paused, setPaused] = useState(false);
   const planetPositions = useRef<Record<string, THREE.Vector3>>({});
-  const controlsRef = useRef<any>(null);
 
   // Escape key unfocuses
   useEffect(() => {
@@ -144,8 +143,6 @@ export function SolarSystemView() {
           <color attach="background" args={["#020208"]} />
           <ambientLight intensity={0.1} />
 
-          <CameraFocus selected={selected} focused={focused} planetPositions={planetPositions} controlsRef={controlsRef} />
-
           <Sun selected={selected === "Sun"} onClick={() => { setSelected("Sun"); setFocused(true); }} onHover={setHovered} />
 
           {planets.map((p) => (
@@ -181,7 +178,7 @@ export function SolarSystemView() {
             <Vignette eskil={false} offset={0.2} darkness={0.7} />
           </EffectComposer>
 
-          <OrbitControls ref={controlsRef} enablePan maxDistance={200} minDistance={0.5} enableDamping dampingFactor={0.05} />
+          <OrbitControls enablePan enableZoom enableRotate maxDistance={500} minDistance={0.5} enableDamping dampingFactor={0.05} />
         </Canvas>
       </div>
 
@@ -288,67 +285,6 @@ export function SolarSystemView() {
       </div>
     </div>
   );
-}
-
-// ─── Camera Focus — works WITH OrbitControls, not against ─────────────────
-
-function CameraFocus({ selected, focused, planetPositions, controlsRef }: {
-  selected: string; focused: boolean;
-  planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
-  controlsRef: React.MutableRefObject<any>;
-}) {
-  const { camera } = useThree();
-  const transitioning = useRef(false);
-  const transitionTimer = useRef(0);
-
-  useFrame((_, delta) => {
-    if (!controlsRef.current) return;
-    const controls = controlsRef.current;
-
-    if (focused) {
-      let targetLook: THREE.Vector3;
-      let targetCam: THREE.Vector3;
-
-      if (selected === "Sun") {
-        targetLook = new THREE.Vector3(0, 0, 0);
-        targetCam = new THREE.Vector3(0, 3, 5);
-      } else {
-        const pos = planetPositions.current[selected];
-        if (!pos) return;
-        const pData = PLANETS.find(([n]) => n === selected);
-        const sz = pData ? Math.max(pData[3] * PLANET_SCALE, MIN_R) : 0.5;
-        const zoomDist = sz * 6 + 1.0;
-        targetLook = pos.clone();
-        targetCam = new THREE.Vector3(pos.x + zoomDist * 0.5, pos.y + zoomDist * 0.6, pos.z + zoomDist);
-      }
-
-      // Smooth transition for 60 frames (~1s), then let OrbitControls take over
-      if (transitionTimer.current < 60) {
-        const t = 0.06;
-        controls.target.lerp(targetLook, t);
-        camera.position.lerp(targetCam, t);
-        controls.update();
-        transitionTimer.current++;
-      }
-    } else {
-      // Return to overview
-      if (transitionTimer.current > 0) {
-        const overview = new THREE.Vector3(0, 0, 0);
-        const overviewCam = new THREE.Vector3(0, 15, 30);
-        controls.target.lerp(overview, 0.05);
-        camera.position.lerp(overviewCam, 0.05);
-        controls.update();
-        if (camera.position.distanceTo(overviewCam) < 0.5) transitionTimer.current = 0;
-      }
-    }
-  });
-
-  // Reset transition timer when selection changes
-  useEffect(() => {
-    transitionTimer.current = 0;
-  }, [selected, focused]);
-
-  return null;
 }
 
 // ─── Sun ────────────────────────────────────────────────────────────────────
