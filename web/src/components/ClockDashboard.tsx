@@ -23,10 +23,16 @@ export function ClockDashboard() {
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      const now = Date.now() / 1000;
-      setTime(engine.getTimeRepresentations(now));
-      setMtcStr(engine.getMTC(now));
-      setElapsed((Date.now() - startRef.current) / 1000);
+      try {
+        const now = Date.now() / 1000;
+        const t = engine.getTimeRepresentations(now);
+        if (t) setTime(t);
+        const mtc = engine.getMTC(now);
+        if (mtc) setMtcStr(mtc);
+        setElapsed((Date.now() - startRef.current) / 1000);
+      } catch (e) {
+        // engine not ready or call failed — skip frame
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -42,13 +48,15 @@ export function ClockDashboard() {
   const ttDate = new Date((time.unix_utc + 69.184) * 1000);
   const ttStr = ttDate.toISOString().replace("T", " ").slice(0, 19);
 
+  const safe = (v: number, digits: number) => (isNaN(v) || v == null) ? "\u2014" : v.toFixed(digits);
+
   const clockValues: Record<string, { main: string; detail: string }> = {
-    utc: { main: utcStr, detail: `JD ${time.jd_utc.toFixed(6)}` },
+    utc: { main: utcStr, detail: `JD ${safe(time.jd_utc, 6)}` },
     tai: { main: taiStr, detail: "UTC + 37 leap seconds" },
-    tt: { main: ttStr, detail: `JD ${time.jd_tt.toFixed(6)}` },
-    tcg: { main: `TT + ${time.tcg_minus_tt_s.toFixed(6)} s`, detail: `Rate: 1 + ${(6.96929e-10).toExponential(4)}` },
-    tcb: { main: `TT + ${time.tcb_minus_tt_s.toFixed(4)} s`, detail: `Rate: 1 + ${(1.55052e-8).toExponential(4)}` },
-    mtc: { main: mtcStr, detail: `Sol ${time.mars_sol_date.toFixed(4)}` },
+    tt: { main: ttStr, detail: `JD ${safe(time.jd_tt, 6)}` },
+    tcg: { main: `TT + ${safe(time.tcg_minus_tt_s, 6)} s`, detail: `Rate: 1 + ${(6.96929e-10).toExponential(4)}` },
+    tcb: { main: `TT + ${safe(time.tcb_minus_tt_s, 4)} s`, detail: `Rate: 1 + ${(1.55052e-8).toExponential(4)}` },
+    mtc: { main: mtcStr, detail: `Sol ${safe(time.mars_sol_date, 4)}` },
   };
 
   return (
@@ -68,7 +76,7 @@ export function ClockDashboard() {
           <text x={320} y={30} textAnchor="middle" fill="#94a3b8" fontSize={14} fontWeight={600} letterSpacing={3}>
             RELATIVISTIC CLOCK COMPARISON
           </text>
-          <text x={320} y={48} textAnchor="middle" fill="#475569" fontSize={10}>
+          <text x={320} y={48} textAnchor="middle" fill="#94a3b8" fontSize={10}>
             Watch how different time scales tick at different rates
           </text>
 
@@ -120,12 +128,12 @@ export function ClockDashboard() {
                 </text>
 
                 {/* Current value below clock */}
-                <text x={cx} y={cy + r + 16} textAnchor="middle" fill="#e2e8f0" fontSize={9} fontFamily="'JetBrains Mono', monospace">
+                <text x={cx} y={cy + r + 16} textAnchor="middle" fill="#e2e8f0" fontSize={10} fontFamily="'JetBrains Mono', monospace">
                   {val.main.length > 19 ? val.main.slice(0, 19) : val.main}
                 </text>
 
                 {/* Rate difference */}
-                <text x={cx} y={cy + r + 28} textAnchor="middle" fill="#475569" fontSize={7}>
+                <text x={cx} y={cy + r + 28} textAnchor="middle" fill="#94a3b8" fontSize={10}>
                   {c.rateLabel}
                 </text>
               </g>
@@ -134,10 +142,10 @@ export function ClockDashboard() {
 
           {/* Rate comparison arrow showing TCG ticks faster than TT */}
           <g opacity={0.6}>
-            <text x={320} y={440} textAnchor="middle" fill="#64748b" fontSize={9}>
+            <text x={320} y={440} textAnchor="middle" fill="#94a3b8" fontSize={10}>
               UTC {"\u2192"} TAI (+37s) {"\u2192"} TT (+32.184s) {"\u2192"} TCG ({"\u00D7"}1+L_G) | TCB ({"\u00D7"}1+L_B)
             </text>
-            <text x={320} y={455} textAnchor="middle" fill="#475569" fontSize={8}>
+            <text x={320} y={455} textAnchor="middle" fill="#94a3b8" fontSize={10}>
               L_G = 6.969{"\u00D7"}10{"\u207B\u00B9\u2070"} | L_B = 1.551{"\u00D7"}10{"\u207B\u2078"} | MTC sol = 88,775.244s
             </text>
           </g>
@@ -217,13 +225,13 @@ const styles: Record<string, React.CSSProperties> = {
   clockList: { display: "flex", flexDirection: "column", gap: "8px" },
   clockRow: { background: "#0f172a", borderRadius: "6px", padding: "8px 10px" },
   clockLabel: { fontSize: "12px", fontWeight: 700, letterSpacing: "2px", marginBottom: "1px" },
-  clockFull: { fontSize: "8px", color: "#475569", marginBottom: "3px" },
+  clockFull: { fontSize: "10px", color: "#94a3b8", marginBottom: "3px" },
   clockValue: { fontSize: "14px", fontWeight: 600, color: "#f1f5f9", fontVariantNumeric: "tabular-nums", marginBottom: "2px" },
   clockDetail: { fontSize: "10px", color: "#64748b", fontVariantNumeric: "tabular-nums" },
   infoCard: { background: "#0f172a", borderRadius: "6px", padding: "10px" },
   infoTitle: { fontSize: "11px", fontWeight: 600, color: "#94a3b8", marginBottom: "6px", letterSpacing: "0.5px" },
   chain: { fontSize: "11px", color: "#e2e8f0", marginBottom: "6px", lineHeight: 1.8 },
-  arrow: { color: "#60a5fa", fontSize: "9px", padding: "0 3px" },
+  arrow: { color: "#60a5fa", fontSize: "10px", padding: "0 3px" },
   constants: { fontSize: "10px", color: "#64748b", display: "flex", flexDirection: "column", gap: "2px" },
   rateCard: { background: "#0f172a", borderRadius: "6px", padding: "10px", display: "flex", flexDirection: "column", gap: "4px" },
   driftRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#94a3b8", fontVariantNumeric: "tabular-nums" },

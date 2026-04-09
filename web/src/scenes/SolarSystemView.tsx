@@ -106,14 +106,26 @@ export function SolarSystemView() {
   const planetPositions = useRef<Record<string, THREE.Vector3>>({});
 
   const planets: PData[] = useMemo(() => {
-    const dd = engine.getSolarSystemDilation();
-    return PLANETS.map(([n, a, p, r, c, rings, incl, tex]) => {
-      const d = dd.find((x) => x.name === n);
-      return { name: n, au: a, period: p, rKm: r, color: c, rings, incl, texture: tex, df: d?.dilation_factor ?? 1, lost: d?.seconds_lost_per_year ?? 0 };
-    });
+    try {
+      const dd = engine.getSolarSystemDilation();
+      return PLANETS.map(([n, a, p, r, c, rings, incl, tex]) => {
+        const d = dd.find((x) => x.name === n);
+        return { name: n, au: a, period: p, rKm: r, color: c, rings, incl, texture: tex, df: d?.dilation_factor ?? 1, lost: d?.seconds_lost_per_year ?? 0 };
+      });
+    } catch (e) {
+      return PLANETS.map(([n, a, p, r, c, rings, incl, tex]) => ({
+        name: n, au: a, period: p, rKm: r, color: c, rings, incl, texture: tex, df: 1, lost: 0,
+      }));
+    }
   }, []);
 
-  const sunD = useMemo(() => engine.getSolarSystemDilation().find((b) => b.name === "Sun"), []);
+  const sunD = useMemo(() => {
+    try {
+      return engine.getSolarSystemDilation().find((b) => b.name === "Sun") ?? null;
+    } catch (e) {
+      return null;
+    }
+  }, []);
   const selP = planets.find((p) => p.name === selected);
   const refDf = selP?.df ?? (selected === "Sun" ? sunD?.dilation_factor ?? 1 : 1);
 
@@ -140,7 +152,7 @@ export function SolarSystemView() {
 
           {/* Scale indicator at 1 AU */}
           <Html position={[AU, -1.5, 0]} center style={{ pointerEvents: "none" }}>
-            <div style={{ color: "#334155", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", borderTop: "1px solid #334155", paddingTop: "2px", textAlign: "center", width: "60px" }}>
+            <div style={{ color: "#94a3b8", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", borderTop: "1px solid #334155", paddingTop: "2px", textAlign: "center", width: "60px" }}>
               1 AU
             </div>
           </Html>
@@ -197,12 +209,17 @@ export function SolarSystemView() {
         <div style={S.comp}>
           <div style={S.compHdr}>Differential Aging vs {selected}</div>
           {planets.filter((p) => p.name !== selected).map((p) => {
-            const d = engine.compareBodies(selected, p.name);
+            let d: number;
+            try {
+              d = engine.compareBodies(selected, p.name);
+            } catch (e) {
+              d = NaN;
+            }
             const valid = !isNaN(d);
             return (
               <div key={p.name} style={S.compRow}>
                 <span style={{ color: p.color }}>{"\u25CF"} {p.name}</span>
-                <span style={{ color: valid ? (d > 0 ? "#34d399" : "#f87171") : "#475569", fontVariantNumeric: "tabular-nums" }}>
+                <span style={{ color: valid ? (d > 0 ? "#34d399" : "#f87171") : "#94a3b8", fontVariantNumeric: "tabular-nums" }}>
                   {valid ? `${d > 0 ? "+" : ""}${d.toFixed(2)} \xB5s/day` : "\u2014"}
                 </span>
               </div>
@@ -428,7 +445,7 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
             <div style={{ color: dColor, fontSize: "10px" }}>
               {ddiff >= 0 ? "+" : ""}{(ddiff * 86400 * 1e6).toFixed(2)} {"\u03BCs/day"}
             </div>
-            <div style={{ color: "#64748b", fontSize: "9px" }}>
+            <div style={{ color: "#94a3b8", fontSize: "10px" }}>
               {d.incl.toFixed(1)}{"\u00B0"} incl{showMoons && moons.length > 0 ? ` | ${moons.length} moon${moons.length > 1 ? "s" : ""}` : ""}
             </div>
           </div>
@@ -483,7 +500,7 @@ function MoonBody({ name, orbitR, radius, color, parentR, inclination }: {
           )}
         </mesh>
         <Html position={[0, moonR + 0.08, 0]} center style={{ pointerEvents: "none" }}>
-          <div style={{ color: "#64748b", fontSize: "7px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{name}</div>
+          <div style={{ color: "#94a3b8", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{name}</div>
         </Html>
       </group>
     </group>
@@ -655,7 +672,7 @@ const S: Record<string, React.CSSProperties> = {
   comp: { display: "flex", flexDirection: "column", gap: "4px" },
   compHdr: { fontSize: "11px", color: "#64748b", letterSpacing: "0.5px", marginBottom: "2px" },
   compRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0", borderBottom: "1px solid #0a0f18" },
-  note: { fontSize: "9px", color: "#475569", fontStyle: "italic", padding: "4px 0" },
+  note: { fontSize: "10px", color: "#94a3b8", fontStyle: "italic", padding: "4px 0" },
   speedControl: { background: "#0a0f18", borderRadius: "6px", padding: "8px", display: "flex", flexDirection: "column", gap: "4px" },
   pauseBtn: { padding: "2px 8px", border: "1px solid #1e293b", borderRadius: "4px", background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: "12px", fontFamily: "inherit" },
   backBtn: {

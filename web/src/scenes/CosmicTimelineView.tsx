@@ -53,8 +53,12 @@ function buildAgeLookup(): LookupEntry[] {
   const table: LookupEntry[] = [];
   for (let i = 0; i <= 500; i++) {
     const z = Math.max(Math.pow(10, (i / 500) * 3.04) - 1, 0);
-    const age = engine.ageAtRedshiftGyr(z);
-    table.push({ age, z });
+    try {
+      const age = engine.ageAtRedshiftGyr(z);
+      if (!isNaN(age)) table.push({ age, z });
+    } catch (e) {
+      // skip this sample on engine error
+    }
   }
   return table.sort((a, b) => a.age - b.age);
 }
@@ -81,20 +85,38 @@ export function CosmicTimelineView() {
   const [showParticles, setShowParticles] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
 
-  const ageLookup = useMemo(() => buildAgeLookup(), []);
-  const ageNow = useMemo(() => engine.ageOfUniverseGyr(), []);
+  const ageLookup = useMemo(() => {
+    try {
+      return buildAgeLookup();
+    } catch (e) {
+      return [];
+    }
+  }, []);
+  const ageNow = useMemo(() => {
+    try {
+      const v = engine.ageOfUniverseGyr();
+      return isNaN(v) ? 13.8 : v;
+    } catch (e) {
+      return 13.8;
+    }
+  }, []);
 
   const sliceZ = useMemo(() => ageToRedshift(ageLookup, epochAge), [ageLookup, epochAge]);
   const sliceData = useMemo(
-    () => ({
-      z: sliceZ,
-      a: engine.scaleFactorFromRedshift(sliceZ),
-      age: epochAge,
-      hubble: engine.hubbleParameterKmSMpc(sliceZ),
-      comoving: engine.comovingDistanceGly(sliceZ),
-      dilation: engine.cosmologicalDilation(sliceZ),
-      lookback: engine.lookbackTimeGyr(sliceZ),
-    }),
+    () => {
+      const s = (fn: () => number, fallback = 0) => {
+        try { const v = fn(); return isNaN(v) ? fallback : v; } catch { return fallback; }
+      };
+      return {
+        z: sliceZ,
+        a: s(() => engine.scaleFactorFromRedshift(sliceZ), 1),
+        age: epochAge,
+        hubble: s(() => engine.hubbleParameterKmSMpc(sliceZ), 67.4),
+        comoving: s(() => engine.comovingDistanceGly(sliceZ)),
+        dilation: s(() => engine.cosmologicalDilation(sliceZ), 1),
+        lookback: s(() => engine.lookbackTimeGyr(sliceZ)),
+      };
+    },
     [sliceZ, epochAge]
   );
 
@@ -105,15 +127,19 @@ export function CosmicTimelineView() {
 
   // Milestones table
   const milestones = useMemo(
-    () =>
-      [0.01, 0.1, 0.5, 1, 2, 5, 10, 100, 1100].map((z) => ({
+    () => {
+      const s = (fn: () => number, fallback = 0) => {
+        try { const v = fn(); return isNaN(v) ? fallback : v; } catch { return fallback; }
+      };
+      return [0.01, 0.1, 0.5, 1, 2, 5, 10, 100, 1100].map((z) => ({
         z,
         a: (1 / (1 + z)).toFixed(4),
-        dilation: engine.cosmologicalDilation(z),
-        lookback: engine.lookbackTimeGyr(z),
-        comoving: engine.comovingDistanceGly(z),
-        age: engine.ageAtRedshiftGyr(z),
-      })),
+        dilation: s(() => engine.cosmologicalDilation(z), 1),
+        lookback: s(() => engine.lookbackTimeGyr(z)),
+        comoving: s(() => engine.comovingDistanceGly(z)),
+        age: s(() => engine.ageAtRedshiftGyr(z)),
+      }));
+    },
     []
   );
 
@@ -173,7 +199,7 @@ export function CosmicTimelineView() {
         </div>
 
         {/* Epoch readout */}
-        <div style={styles.results} data-testid="epoch-readout">
+        <div style={{ ...styles.results, transition: "all 0.3s ease" }} data-testid="epoch-readout">
           <div style={styles.resultRow}>
             <span>Redshift z</span>
             <span style={{ color: "#f59e0b" }}>{sliceData.z < 100 ? sliceData.z.toFixed(2) : sliceData.z.toFixed(0)}</span>
@@ -202,7 +228,7 @@ export function CosmicTimelineView() {
             <span>Lookback time</span>
             <span>{sliceData.lookback.toFixed(2)} Gyr</span>
           </div>
-          <div style={{ ...styles.resultRow, color: "#64748b", fontSize: "10px", marginTop: "4px" }}>
+          <div style={{ ...styles.resultRow, color: "#94a3b8", fontSize: "10px", marginTop: "4px", transition: "color 0.3s ease" }}>
             {describeRedshift(sliceData.z)}
           </div>
         </div>
@@ -449,7 +475,7 @@ function MilestoneRings({ showLabels, epochAge }: { showLabels: boolean; epochAg
               <div
                 style={{
                   color: m.color,
-                  fontSize: "9px",
+                  fontSize: "10px",
                   fontFamily: "'JetBrains Mono', monospace",
                   background: "rgba(1,1,8,0.85)",
                   padding: "2px 6px",
@@ -472,7 +498,7 @@ function MilestoneRings({ showLabels, epochAge }: { showLabels: boolean; epochAg
               <div
                 style={{
                   color: m.color,
-                  fontSize: "9px",
+                  fontSize: "10px",
                   fontFamily: "'JetBrains Mono', monospace",
                   background: "rgba(1,1,8,0.85)",
                   padding: "2px 6px",
@@ -532,8 +558,8 @@ function CosmicTimeAxis() {
           >
             <div
               style={{
-                color: "#64748b",
-                fontSize: "8px",
+                color: "#94a3b8",
+                fontSize: "10px",
                 fontFamily: "'JetBrains Mono', monospace",
                 whiteSpace: "nowrap",
               }}
@@ -586,7 +612,7 @@ function EpochSlicePlane({ epochAge, sliceZ }: { epochAge: number; sliceZ: numbe
         <div
           style={{
             color: "#f59e0b",
-            fontSize: "9px",
+            fontSize: "10px",
             fontFamily: "'JetBrains Mono', monospace",
             background: "rgba(1,1,8,0.9)",
             padding: "2px 8px",
@@ -758,7 +784,7 @@ function ObserverMarker() {
         <div
           style={{
             color: "#60a5fa",
-            fontSize: "9px",
+            fontSize: "10px",
             fontFamily: "'JetBrains Mono', monospace",
             background: "rgba(1,1,8,0.85)",
             padding: "2px 6px",
@@ -834,8 +860,8 @@ const styles: Record<string, React.CSSProperties> = {
   sliderTicks: {
     display: "flex",
     justifyContent: "space-between",
-    fontSize: "9px",
-    color: "#475569",
+    fontSize: "10px",
+    color: "#94a3b8",
   },
   results: {
     background: "#0f172a",
@@ -895,8 +921,8 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "left",
     padding: "3px 6px",
     borderBottom: "1px solid #1e293b",
-    color: "#64748b",
-    fontSize: "9px",
+    color: "#94a3b8",
+    fontSize: "10px",
     letterSpacing: "0.5px",
     textTransform: "uppercase" as const,
   },
