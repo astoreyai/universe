@@ -173,6 +173,48 @@ pub fn saturn() -> CelestialBody {
     }
 }
 
+/// Uranus
+pub fn uranus() -> CelestialBody {
+    CelestialBody {
+        name: "Uranus".into(),
+        gm: GM_URANUS,
+        radius: R_URANUS,
+        spin: 0.0,
+        position: [2.871e12, 0.0, 0.0], // ~19.19 AU
+        velocity: [0.0, 6_800.0, 0.0],
+        semi_major_axis: 2.871e12,
+        eccentricity: 0.0457,
+    }
+}
+
+/// Neptune
+pub fn neptune() -> CelestialBody {
+    CelestialBody {
+        name: "Neptune".into(),
+        gm: GM_NEPTUNE,
+        radius: R_NEPTUNE,
+        spin: 0.0,
+        position: [4.498e12, 0.0, 0.0], // ~30.07 AU
+        velocity: [0.0, 5_430.0, 0.0],
+        semi_major_axis: 4.498e12,
+        eccentricity: 0.0113,
+    }
+}
+
+/// Pluto (dwarf planet)
+pub fn pluto() -> CelestialBody {
+    CelestialBody {
+        name: "Pluto".into(),
+        gm: GM_PLUTO,
+        radius: R_PLUTO,
+        spin: 0.0,
+        position: [5.906e12, 0.0, 0.0], // ~39.48 AU
+        velocity: [0.0, 4_740.0, 0.0],
+        semi_major_axis: 5.906e12,
+        eccentricity: 0.2488,
+    }
+}
+
 /// Returns all predefined solar system bodies.
 pub fn solar_system() -> Vec<CelestialBody> {
     vec![
@@ -184,6 +226,9 @@ pub fn solar_system() -> Vec<CelestialBody> {
         mars(),
         jupiter(),
         saturn(),
+        uranus(),
+        neptune(),
+        pluto(),
     ]
 }
 

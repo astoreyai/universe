@@ -66,6 +66,9 @@ pub const GM_URANUS: f64 = 5.793_939_e15;
 /// GM of Neptune (m³/s²)
 pub const GM_NEPTUNE: f64 = 6.836_527_e15;
 
+/// GM of Pluto (m³/s²)
+pub const GM_PLUTO: f64 = 8.71e11;
+
 // ─── Planetary Radii (meters) ───────────────────────────────────────────────
 
 /// Earth equatorial radius (m) — WGS84
@@ -85,6 +88,15 @@ pub const R_JUPITER: f64 = 7.149_2e7;
 
 /// Saturn equatorial radius (m)
 pub const R_SATURN: f64 = 6.026_8e7;
+
+/// Uranus equatorial radius (m)
+pub const R_URANUS: f64 = 2.536_2e7;
+
+/// Neptune equatorial radius (m)
+pub const R_NEPTUNE: f64 = 2.462_2e7;
+
+/// Pluto mean radius (m)
+pub const R_PLUTO: f64 = 1.188_3e6;
 
 // ─── Earth-Specific Constants ───────────────────────────────────────────────
 
