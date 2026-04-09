@@ -36,6 +36,15 @@ function formatEscapeVelocity(vEsc: number | null): string {
   return `${(vEsc / 1000).toFixed(1)} km/s`;
 }
 
+// ─── Pulsing animation style for reference body ──────────────────────────
+
+const pulseKeyframes = `
+@keyframes pulse-ref {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.4; }
+}
+`;
+
 export function DilationTable() {
   const [referenceBody, setReferenceBody] = useState("Earth");
   const [hoveredBody, setHoveredBody] = useState<string | null>(null);
@@ -96,12 +105,16 @@ export function DilationTable() {
     return allBodies.map((b) => {
       const shift = 1 - b.dilation_factor;
       const logSeverity = shift > 0 ? Math.max(Math.log10(shift) + 10, 0) / 10 : 0;
-      return { ...b, shift, logSeverity, color: BODY_COLORS[b.name] || "#94a3b8" };
+      const isExtreme = b.name.includes("Neutron") || b.name.includes("Black");
+      return { ...b, shift, logSeverity, color: BODY_COLORS[b.name] || "#94a3b8", isExtreme };
     }); // already sorted by allBodies
   }, [allBodies]);
 
   return (
     <div style={styles.container} className="scene-layout">
+      {/* Inject pulse animation */}
+      <style>{pulseKeyframes}</style>
+
       {/* Visual radial chart */}
       <div style={styles.vizSection} className="scene-canvas">
         <svg viewBox="0 0 600 500" style={{ width: "100%", height: "100%" }}>
@@ -138,26 +151,39 @@ export function DilationTable() {
             const isRef = b.name === referenceBody;
             const relDiff = (b.dilation_factor - refFactor) * 86_400 * 1e6;
 
+            // Color-code: green = faster than ref, red = slower than ref (when ref is set)
+            const bodyCircleColor = isRef ? b.color
+              : b.dilation_factor > refFactor ? "#34d399"
+              : b.dilation_factor < refFactor ? "#f87171"
+              : b.color;
+
             return (
               <g key={b.name}
                 onPointerEnter={() => setHoveredBody(b.name)}
                 onPointerLeave={() => setHoveredBody(null)}
-                onClick={() => setReferenceBody(b.name.includes("Neutron") || b.name.includes("Black") ? referenceBody : b.name)}
-                style={{ cursor: b.name.includes("Neutron") || b.name.includes("Black") ? "default" : "pointer" }}
+                onClick={() => setReferenceBody(b.isExtreme ? referenceBody : b.name)}
+                style={{ cursor: b.isExtreme ? "not-allowed" : "pointer" }}
+                opacity={b.isExtreme ? 0.5 : 1}
               >
+                {/* Tooltip for extreme objects */}
+                {b.isExtreme && <title>Cannot be used as reference frame</title>}
+
                 {/* Gravity well glow */}
                 <circle cx={cx} cy={cy} r={radius * 1.5}
                   fill={`url(#grad-${b.name.replace(/[^a-z]/gi, "")})`}
                   opacity={isHovered ? 0.8 : 0.5}
                   style={{ transition: "opacity 0.25s ease" }}
                 />
-                {/* Body circle */}
+                {/* Body circle — pulsing if reference */}
                 <circle cx={cx} cy={cy} r={Math.max(radius * 0.4, 5)}
-                  fill={b.color}
+                  fill={bodyCircleColor}
                   stroke={isRef ? "#fff" : isHovered ? b.color : "none"}
                   strokeWidth={isRef ? 2 : 1}
                   opacity={0.9}
-                  style={{ transition: "stroke 0.25s ease, stroke-width 0.25s ease" }}
+                  style={{
+                    transition: "stroke 0.25s ease, stroke-width 0.25s ease",
+                    ...(isRef ? { animation: "pulse-ref 2s ease-in-out infinite" } : {}),
+                  }}
                 />
                 {/* Label */}
                 <text x={cx} y={cy + radius * 0.4 + 14} textAnchor="middle"
@@ -229,6 +255,9 @@ export function DilationTable() {
             const isHovered = hoveredBody === b.name;
             const color = BODY_COLORS[b.name] || "#94a3b8";
             const vEsc = computeEscapeVelocity(b);
+            // Compute logSeverity for bar width (same as chart)
+            const shift = 1 - b.dilation_factor;
+            const logSeverity = shift > 0 ? Math.max(Math.log10(shift) + 10, 0) / 10 : 0;
             return (
               <div key={b.name} style={{
                 ...styles.dataRow,
@@ -252,19 +281,21 @@ export function DilationTable() {
                     {isRef ? "REF" : formatMicroseconds(relDiff) + "/day"}
                   </span>
                 </div>
-                {/* Escape velocity */}
-                <div style={styles.bodyDetail}>
-                  <span>v_esc: {formatEscapeVelocity(vEsc)}</span>
-                </div>
+                {/* Escape velocity — only on hover */}
+                {isHovered && (
+                  <div style={styles.bodyDetail}>
+                    <span>v_esc: {formatEscapeVelocity(vEsc)}</span>
+                  </div>
+                )}
                 {/* Description on hover */}
                 {isHovered && BODY_DESCRIPTIONS[b.name] && (
                   <div style={styles.bodyDesc}>{BODY_DESCRIPTIONS[b.name]}</div>
                 )}
-                {/* Visual severity bar */}
+                {/* Visual severity bar — unified with chart logSeverity */}
                 <div style={styles.barBg}>
                   <div style={{
                     ...styles.barFill,
-                    width: `${Math.min((1 - b.dilation_factor) * 1e8 * 0.8, 100)}%`,
+                    width: `${Math.min(logSeverity * 100, 100)}%`,
                     background: color,
                   }} />
                 </div>
@@ -273,9 +304,10 @@ export function DilationTable() {
           })}
         </div>
 
-        {/* Pairwise comparison — user-selectable */}
+        {/* Time Drift per Day — user-selectable */}
         <div style={styles.compSection}>
-          <div style={styles.compTitle}>Pairwise Comparison</div>
+          <div style={styles.compTitle}>Time Drift per Day</div>
+          <div style={styles.compSubtitle}>How much faster or slower clock B ticks vs clock A</div>
           <div style={styles.compControls}>
             <select value={compA} onChange={(e) => setCompA(e.target.value)} style={styles.selectSmall}>
               {allBodies.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
@@ -386,6 +418,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex", flexDirection: "column", gap: "4px",
   },
   compTitle: { fontSize: "10px", color: "#64748b", fontWeight: 600, letterSpacing: "0.5px" },
+  compSubtitle: { fontSize: "9px", color: "#475569", fontStyle: "italic", marginBottom: "2px" },
   compControls: {
     display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px",
   },

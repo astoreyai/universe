@@ -81,9 +81,10 @@ function ageToRedshift(table: LookupEntry[], ageGyr: number): number {
 
 export function CosmicTimelineView() {
   const [epochAge, setEpochAge] = useState(13.8); // Gyr — default to present
-  const [showHubble, setShowHubble] = useState(false);
+  const [showHubble, setShowHubble] = useState(true);
   const [showParticles, setShowParticles] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const ageLookup = useMemo(() => {
     try {
@@ -176,6 +177,28 @@ export function CosmicTimelineView() {
       <div style={styles.panel} className="scene-panel" data-testid="cosmic-panel">
         <div style={styles.panelTitle}>Cosmic Timeline</div>
 
+        {/* Epoch description — prominent */}
+        {(() => {
+          const desc = describeRedshift(sliceData.z);
+          const nearMilestone = MILESTONES.reduce<{ ms: typeof MILESTONES[0]; dist: number } | null>((best, ms) => {
+            const dist = Math.abs(sliceData.z - ms.z) / Math.max(ms.z, 1);
+            if (!best || dist < best.dist) return { ms, dist };
+            return best;
+          }, null);
+          const useColor = nearMilestone && nearMilestone.dist < 0.3 ? nearMilestone.ms.color : "#cbd5e1";
+          return (
+            <div style={{
+              fontSize: "14px",
+              fontWeight: 700,
+              color: useColor,
+              lineHeight: "1.3",
+              transition: "all 0.3s ease",
+            }}>
+              {desc}
+            </div>
+          );
+        })()}
+
         {/* Epoch slider */}
         <div style={styles.sliderSection}>
           <div style={styles.sliderHeader}>
@@ -228,56 +251,37 @@ export function CosmicTimelineView() {
             <span>Lookback time</span>
             <span>{sliceData.lookback.toFixed(2)} Gyr</span>
           </div>
-          <div style={{ ...styles.resultRow, color: "#94a3b8", fontSize: "10px", marginTop: "4px", transition: "color 0.3s ease" }}>
-            {describeRedshift(sliceData.z)}
-          </div>
-          {/* Round 7 — Prominent epoch description */}
-          {(() => {
-            const desc = describeRedshift(sliceData.z);
-            const nearMilestone = MILESTONES.reduce<{ ms: typeof MILESTONES[0]; dist: number } | null>((best, ms) => {
-              const dist = Math.abs(sliceData.z - ms.z) / Math.max(ms.z, 1);
-              if (!best || dist < best.dist) return { ms, dist };
-              return best;
-            }, null);
-            const useColor = nearMilestone && nearMilestone.dist < 0.3 ? nearMilestone.ms.color : "#cbd5e1";
-            return (
-              <div style={{
-                marginTop: "6px",
-                padding: "6px 8px",
-                background: "rgba(15,23,42,0.6)",
-                borderRadius: "4px",
-                borderLeft: `3px solid ${useColor}`,
-                fontSize: "13px",
-                fontWeight: 600,
-                color: useColor,
-                lineHeight: "1.3",
-                transition: "all 0.3s ease",
-              }}>
-                {desc}
-              </div>
-            );
-          })()}
         </div>
 
-        {/* ΛCDM parameters */}
+        {/* ΛCDM parameters — collapsible */}
         <div style={styles.paramSection}>
-          <div style={styles.paramTitle}>{"\u039B"}CDM Parameters</div>
-          <div style={styles.resultRow}>
-            <span>Age</span>
-            <span>{ageNow.toFixed(2)} Gyr</span>
+          <div
+            style={{ ...styles.paramTitle, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            <span>{"\u039B"}CDM Parameters & FLRW</span>
+            <span style={{ fontSize: "10px", color: "#64748b" }}>{showAdvanced ? "\u25B2" : "\u25BC"}</span>
           </div>
-          <div style={styles.resultRow}>
-            <span>H{"\u2080"}</span>
-            <span>67.4 km/s/Mpc</span>
-          </div>
-          <div style={styles.resultRow}>
-            <span>{"\u03A9"}{"\u2098"}</span>
-            <span>0.315</span>
-          </div>
-          <div style={styles.resultRow}>
-            <span>{"\u03A9"}{"\u039B"}</span>
-            <span>0.685</span>
-          </div>
+          {showAdvanced && (
+            <>
+              <div style={styles.resultRow}>
+                <span>Age</span>
+                <span>{ageNow.toFixed(2)} Gyr</span>
+              </div>
+              <div style={styles.resultRow}>
+                <span>H{"\u2080"} <span style={{ color: "#64748b", fontSize: "9px" }}>(expansion rate)</span></span>
+                <span>67.4 km/s/Mpc</span>
+              </div>
+              <div style={styles.resultRow}>
+                <span>{"\u03A9"}{"\u2098"} <span style={{ color: "#64748b", fontSize: "9px" }}>(matter fraction)</span></span>
+                <span>0.315</span>
+              </div>
+              <div style={styles.resultRow}>
+                <span>{"\u03A9"}{"\u039B"} <span style={{ color: "#64748b", fontSize: "9px" }}>(dark energy fraction)</span></span>
+                <span>0.685</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* View toggles */}
@@ -307,6 +311,9 @@ export function CosmicTimelineView() {
             <input type="checkbox" checked={showParticles} onChange={(e) => setShowParticles(e.target.checked)} />
             <span>Particle Field</span>
           </label>
+          <div style={{ fontSize: "9px", color: "#64748b", marginLeft: "22px", marginTop: "-4px", lineHeight: "1.3" }}>
+            Shows cosmic web structure — bright nodes are galaxy clusters, dim particles are filaments connecting them
+          </div>
           <label style={styles.toggleLabel}>
             <input type="checkbox" checked={showLabels} onChange={(e) => setShowLabels(e.target.checked)} />
             <span>Milestone Labels</span>
@@ -327,8 +334,13 @@ export function CosmicTimelineView() {
             </thead>
             <tbody>
               {milestones.map((m) => (
-                <tr key={m.z} onClick={() => setEpochAge(m.age)} style={{ cursor: "pointer" }}
-                  title={`Jump to z=${m.z} (${m.age.toFixed(2)} Gyr)`}>
+                <tr key={m.z} onClick={() => setEpochAge(m.age)}
+                  className="milestone-row"
+                  style={{ cursor: "pointer", transition: "background 0.15s" }}
+                  title={`Jump to z=${m.z} (${m.age.toFixed(2)} Gyr)`}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1e293b"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                >
                   <td style={styles.td}>{m.z}</td>
                   <td style={styles.tdMono}>{m.a}</td>
                   <td style={styles.tdMono}>{m.lookback.toFixed(1)}</td>
@@ -339,16 +351,18 @@ export function CosmicTimelineView() {
           </table>
         </div>
 
-        {/* FLRW metric */}
-        <div style={styles.flrwCard}>
-          <div style={styles.flrwTitle}>FLRW Metric</div>
-          <div style={styles.flrwEq}>
-            ds{"\u00B2"} = -c{"\u00B2"}dt{"\u00B2"} + a(t){"\u00B2"}[dr{"\u00B2"} + r{"\u00B2"}d{"\u03A9"}{"\u00B2"}]
+        {/* FLRW metric — collapsible with LCDM */}
+        {showAdvanced && (
+          <div style={styles.flrwCard}>
+            <div style={styles.flrwTitle}>FLRW Metric</div>
+            <div style={styles.flrwEq}>
+              ds{"\u00B2"} = -c{"\u00B2"}dt{"\u00B2"} + a(t){"\u00B2"}[dr{"\u00B2"} + r{"\u00B2"}d{"\u03A9"}{"\u00B2"}]
+            </div>
+            <div style={styles.flrwDetail}>
+              {"\u0394"}t_obs = (1+z) {"\u00D7"} {"\u0394"}t_emit | H(z) = H{"\u2080"}{"\u221A"}({"\u03A9"}_m(1+z){"\u00B3"} + {"\u03A9"}_{"\u039B"})
+            </div>
           </div>
-          <div style={styles.flrwDetail}>
-            {"\u0394"}t_obs = (1+z) {"\u00D7"} {"\u0394"}t_emit | H(z) = H{"\u2080"}{"\u221A"}({"\u03A9"}_m(1+z){"\u00B3"} + {"\u03A9"}_{"\u039B"})
-          </div>
-        </div>
+        )}
 
         {/* Round 6 — Light cone color legend */}
         <div style={styles.flrwCard}>
@@ -377,6 +391,11 @@ export function CosmicTimelineView() {
             <div>1 Gly = 1 billion light-years = 9.46 {"\u00D7"} 10{"\u00B2\u2074"} m</div>
             <div>1 Gyr = 1 billion years = 3.156 {"\u00D7"} 10{"\u00B9\u2076"} s</div>
           </div>
+        </div>
+
+        {/* Why This Matters */}
+        <div style={styles.infoCard}>
+          The cosmic microwave background (z=1100) is the oldest light we can see — emitted when the universe was 380,000 years old. Everything we know about the universe's age, composition, and fate comes from measuring how this light has been redshifted by cosmic expansion.
         </div>
       </div>
     </div>
@@ -828,6 +847,21 @@ function HubbleSphere() {
         <wireframeGeometry args={[geometry]} />
         <lineBasicMaterial color="#06b6d4" transparent opacity={0.15} />
       </lineSegments>
+      {/* Hubble sphere label */}
+      <Html position={[3, SCENE_HEIGHT / 2, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{
+          color: "#06b6d4",
+          fontSize: "10px",
+          fontFamily: "'JetBrains Mono', monospace",
+          background: "rgba(1,1,8,0.9)",
+          padding: "3px 8px",
+          borderRadius: "3px",
+          whiteSpace: "nowrap",
+          border: "1px solid #06b6d430",
+        }}>
+          Hubble Sphere — beyond here, recession &gt; c
+        </div>
+      </Html>
     </group>
   );
 }
@@ -1067,5 +1101,14 @@ const styles: Record<string, React.CSSProperties> = {
   flrwDetail: {
     fontSize: "10px",
     color: "#64748b",
+  },
+  infoCard: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "10px",
+    fontSize: "10px",
+    color: "#94a3b8",
+    lineHeight: "1.5",
+    borderLeft: "3px solid #3b82f6",
   },
 };

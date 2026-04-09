@@ -181,7 +181,7 @@ export function BlackHoleView() {
           onChange={setObserverR}
         />
 
-        <div style={styles.results}>
+        <div style={{ ...styles.results, borderLeft: `3px solid ${dilation > 0.8 ? "#34d399" : dilation > 0.5 ? "#fbbf24" : "#ef4444"}` }}>
           <div style={styles.resultRow}>
             <span>Schwarzschild radius</span>
             <span>{(rs / 1000).toFixed(1)} km</span>
@@ -224,47 +224,75 @@ export function BlackHoleView() {
           </div>
         </div>
 
+        {/* Formula card */}
+        <div style={styles.formulaCard}>
+          <div style={styles.formulaTitle}>Formulas</div>
+          <div style={styles.formulaText}>
+            d{"\u03C4"}/dt = {"\u221A"}(1 - r{"\u209b"}/r)
+          </div>
+          <div style={{ ...styles.formulaText, marginTop: "4px", fontSize: "10px", color: "#64748b" }}>
+            r{"\u209b"} = 2GM/c{"\u00B2"}
+          </div>
+        </div>
+
+        {/* Why This Matters */}
+        <div style={styles.infoCard}>
+          Black holes test general relativity at its extremes. Near the event horizon, time dilation approaches infinity — a clock would appear to freeze from a distant observer's perspective. Accretion disks around black holes are the brightest objects in the universe, powering quasars visible across billions of light-years.
+        </div>
+
         <div style={styles.profileSection}>
           <div style={styles.profileTitle}>Dilation Profile</div>
           <svg viewBox="0 0 260 120" style={styles.svg}>
-            {/* Grid */}
-            {[0.25, 0.5, 0.75, 1.0].map((v) => (
-              <g key={v}>
-                <line
-                  x1={30}
-                  y1={110 - v * 100}
-                  x2={255}
-                  y2={110 - v * 100}
-                  stroke="#1e293b"
-                  strokeWidth={0.5}
-                />
-                <text
-                  x={2}
-                  y={113 - v * 100}
-                  fill="#94a3b8"
-                  fontSize={10}
-                  fontFamily="monospace"
-                >
-                  {v.toFixed(2)}
-                </text>
-              </g>
-            ))}
-            {/* Curve */}
+            {/* Grid — log scale: map dilation [0..1] with log spacing */}
+            {[0.01, 0.1, 0.25, 0.5, 1.0].map((v) => {
+              const yPos = 110 - (Math.log10(v + 0.001) + 3) / (Math.log10(1.001) + 3) * 100;
+              return (
+                <g key={v}>
+                  <line
+                    x1={30}
+                    y1={yPos}
+                    x2={255}
+                    y2={yPos}
+                    stroke="#1e293b"
+                    strokeWidth={0.5}
+                  />
+                  <text
+                    x={2}
+                    y={yPos + 3}
+                    fill="#94a3b8"
+                    fontSize={10}
+                    fontFamily="monospace"
+                  >
+                    {v < 0.1 ? v.toFixed(2) : v.toFixed(1)}
+                  </text>
+                </g>
+              );
+            })}
+            {/* Danger zone: dilation < 0.1 — red band */}
+            {(() => {
+              const dangerY = 110 - (Math.log10(0.1 + 0.001) + 3) / (Math.log10(1.001) + 3) * 100;
+              return (
+                <rect x={30} y={dangerY} width={225} height={110 - dangerY} fill="#ef4444" opacity={0.08} />
+              );
+            })()}
+            {/* Curve — log scale Y */}
             <polyline
               fill="none"
               stroke="#60a5fa"
               strokeWidth={1.5}
               points={profile
                 .map(
-                  (p) =>
-                    `${30 + ((p.r - 1.05) / 19) * 225},${110 - p.d * 100}`
+                  (p) => {
+                    const yPos = 110 - (Math.log10(p.d + 0.001) + 3) / (Math.log10(1.001) + 3) * 100;
+                    return `${30 + ((p.r - 1.05) / 19) * 225},${yPos}`;
+                  }
                 )
                 .join(" ")}
             />
             {/* Observer marker */}
             <circle
               cx={30 + ((observerR - 1.05) / 19) * 225}
-              cy={110 - dilation * 100}
+              cy={110 - (Math.log10(dilation + 0.001) + 3) / (Math.log10(1.001) + 3) * 100}
               r={3}
               fill="#f59e0b"
               style={{ transition: "cx 0.3s ease, cy 0.3s ease" }}
@@ -282,7 +310,7 @@ export function BlackHoleView() {
             <text x={32} y={20} fill="#ef4444" fontSize={10} fontFamily="monospace">
               r{"\u209b"}
             </text>
-            {/* ISCO radius marker — r_ISCO = 3rs*(1 - spin*0.5) */}
+            {/* ISCO radius marker — r_ISCO = 3rs at spin=0 (Schwarzschild), varies with spin */}
             {(() => {
               const iscoRs = 3 * (1 - spin * 0.5);
               const iscoX = 30 + ((iscoRs - 1.05) / 19) * 225;
@@ -297,7 +325,7 @@ export function BlackHoleView() {
                     strokeWidth={1}
                     strokeDasharray="4,2"
                   />
-                  <text x={iscoX + 2} y={20} fill="#a78bfa" fontSize={9} fontFamily="monospace">
+                  <text x={iscoX + 2} y={20} fill="#a78bfa" fontSize={10} fontFamily="monospace">
                     ISCO
                   </text>
                 </g>
@@ -386,7 +414,7 @@ function BlackHoleScene({
 
       {/* Round 6 — Schwarzschild radius label at event horizon */}
       <Html position={[1, 0.5, 0]} center style={{ pointerEvents: "none" }}>
-        <div style={{ color: "#ef4444", fontSize: "9px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.85)", padding: "2px 6px", borderRadius: "3px", whiteSpace: "nowrap", border: "1px solid #ef444430" }}>
+        <div style={{ color: "#ef4444", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.85)", padding: "2px 6px", borderRadius: "3px", whiteSpace: "nowrap", border: "1px solid #ef444430" }}>
           r = {(rs / 1000).toFixed(1)} km
         </div>
       </Html>
@@ -532,7 +560,7 @@ function FrameDraggingRing({ spin, scale }: { spin: number; scale: number }) {
         <meshBasicMaterial color="#c084fc" transparent opacity={0.6} />
       </mesh>
       <Html position={[1.2 * scale, 0.3, 0]} center style={{ pointerEvents: "none" }}>
-        <div style={{ color: "#c084fc", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.8)", padding: "1px 5px", borderRadius: "3px", whiteSpace: "nowrap" }}>
+        <div style={{ color: "#c084fc", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.8)", padding: "1px 5px", borderRadius: "3px", whiteSpace: "nowrap" }}>
           Frame Dragging
         </div>
       </Html>
@@ -704,5 +732,32 @@ const styles: Record<string, React.CSSProperties> = {
   svg: {
     width: "100%",
     height: "auto",
+  },
+  formulaCard: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "8px",
+    textAlign: "center",
+  },
+  formulaTitle: {
+    fontSize: "10px",
+    color: "#94a3b8",
+    letterSpacing: "1px",
+    textTransform: "uppercase" as const,
+    marginBottom: "3px",
+  },
+  formulaText: {
+    fontSize: "11px",
+    color: "#a78bfa",
+    fontStyle: "italic",
+  },
+  infoCard: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "10px",
+    fontSize: "10px",
+    color: "#94a3b8",
+    lineHeight: "1.5",
+    borderLeft: "3px solid #3b82f6",
   },
 };
