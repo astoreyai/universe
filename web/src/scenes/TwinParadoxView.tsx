@@ -638,7 +638,11 @@ function TimeBar({ label, years, max, color }: { label: string; years: number; m
     <div style={styles.timelineRow}>
       <div style={styles.timelineLabel}>{label}</div>
       <div style={styles.timelineBar}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "3px", transition: "width 0.5s ease" }} />
+        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "9px", transition: "width 0.5s ease", position: "relative" }}>
+          <div style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", fontSize: "9px", color: "#fff", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
+            {years.toFixed(2)}
+          </div>
+        </div>
       </div>
       <div style={styles.timelineValue}>{years.toFixed(2)} yr</div>
     </div>
@@ -685,7 +689,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   panel: {
     width: "280px",
-    background: "#111827",
+    background: "rgba(17,24,39,0.85)",
+    backdropFilter: "blur(12px)",
     border: "1px solid #1e293b",
     borderRadius: "8px",
     padding: "14px",
@@ -698,7 +703,7 @@ const styles: Record<string, React.CSSProperties> = {
   panelTitle: {
     fontSize: "13px",
     fontWeight: 600,
-    color: "#94a3b8",
+    color: "#8b5cf6",
     letterSpacing: "1px",
     textTransform: "uppercase" as const,
   },
@@ -757,6 +762,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "4px",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   resultRow: {
     display: "flex",
@@ -772,6 +778,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "6px",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   timelineTitle: {
     fontSize: "11px",
@@ -792,10 +799,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   timelineBar: {
     flex: 1,
-    height: "10px",
+    height: "18px",
     background: "#1e293b",
-    borderRadius: "3px",
+    borderRadius: "9px",
     overflow: "hidden",
+    position: "relative",
   },
   timelineValue: {
     width: "55px",
@@ -808,6 +816,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "6px",
     padding: "8px",
     textAlign: "center",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   formulaTitle: {
     fontSize: "10px",
@@ -829,5 +838,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#94a3b8",
     lineHeight: "1.5",
     borderLeft: "3px solid #3b82f6",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
 };

@@ -107,6 +107,7 @@ export function ClockDashboard() {
               <stop offset="0%" stopColor="#0f172a" />
               <stop offset="100%" stopColor="#020208" />
             </radialGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           </defs>
           <rect width="640" height="580" fill="url(#bg-grad)" />
 
@@ -170,7 +171,7 @@ export function ClockDashboard() {
                           stroke={c.color} strokeWidth={h % 3 === 0 ? 1.5 : 0.5} opacity={0.6} />;
                       })}
                       <line x1={cx} y1={cy} x2={mx} y2={my} stroke={c.color} strokeWidth={1.5} opacity={0.5} strokeLinecap="round" />
-                      <line x1={cx} y1={cy} x2={sx} y2={sy} stroke={c.color} strokeWidth={1} opacity={0.9} strokeLinecap="round" />
+                      <line x1={cx} y1={cy} x2={sx} y2={sy} stroke={c.color} strokeWidth={1} opacity={0.9} strokeLinecap="round" filter="url(#glow)" />
                       <circle cx={cx} cy={cy} r={2} fill={c.color} />
                       <text x={cx} y={cy - r - 8} textAnchor="middle" fill={c.color} fontSize={13} fontWeight={700} letterSpacing={2}>
                         {c.label}
@@ -352,15 +353,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex", alignItems: "center", justifyContent: "center",
   },
   panel: {
-    width: "320px", background: "#111827", border: "1px solid #1e293b",
+    width: "320px", background: "rgba(17,24,39,0.85)", backdropFilter: "blur(12px)",
+    border: "1px solid #1e293b",
     borderRadius: "8px", padding: "14px", marginLeft: "10px",
     overflow: "auto", display: "flex", flexDirection: "column", gap: "10px",
   },
-  panelTitle: { fontSize: "13px", fontWeight: 600, color: "#94a3b8", letterSpacing: "1px", textTransform: "uppercase" as const },
+  panelTitle: { fontSize: "13px", fontWeight: 600, color: "#06b6d4", letterSpacing: "1px", textTransform: "uppercase" as const },
   subtitle: { fontSize: "10px", color: "#64748b", marginTop: "-6px" },
   detailCard: {
     background: "#0f172a", borderRadius: "6px", padding: "10px",
     border: "1px solid", transition: "all 0.3s ease",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   detailLabel: { fontSize: "12px", fontWeight: 700, marginBottom: "4px" },
   detailWhy: { fontSize: "11px", color: "#e2e8f0", marginBottom: "4px", lineHeight: 1.5 },
@@ -370,14 +373,15 @@ const styles: Record<string, React.CSSProperties> = {
   clockRow: {
     background: "#0f172a", borderRadius: "6px", padding: "6px 10px",
     cursor: "pointer", transition: "all 0.2s ease", borderLeft: "3px solid transparent",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   clockLabel: { fontSize: "11px", fontWeight: 700, letterSpacing: "2px" },
   clockValue: { fontSize: "13px", fontWeight: 600, color: "#f1f5f9", fontVariantNumeric: "tabular-nums" },
   clockDetail: { fontSize: "10px", color: "#64748b", fontVariantNumeric: "tabular-nums" },
-  rateCard: { background: "#0f172a", borderRadius: "6px", padding: "10px", display: "flex", flexDirection: "column", gap: "4px" },
+  rateCard: { background: "#0f172a", borderRadius: "6px", padding: "10px", display: "flex", flexDirection: "column", gap: "4px", boxShadow: "0 0 15px rgba(0,0,0,0.3)" },
   infoTitle: { fontSize: "11px", fontWeight: 600, color: "#94a3b8", marginBottom: "4px", letterSpacing: "0.5px" },
   driftRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#94a3b8", fontVariantNumeric: "tabular-nums" },
-  infoCard: { background: "#0f172a", borderRadius: "6px", padding: "10px" },
+  infoCard: { background: "#0f172a", borderRadius: "6px", padding: "10px", boxShadow: "0 0 15px rgba(0,0,0,0.3)" },
   whyText: { fontSize: "11px", color: "#e2e8f0", lineHeight: 1.5 },
   constants: { fontSize: "10px", color: "#64748b", display: "flex", flexDirection: "column", gap: "2px" },
 };
