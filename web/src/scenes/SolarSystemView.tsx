@@ -104,6 +104,7 @@ export function SolarSystemView() {
   const [focused, setFocused] = useState(false);
   const [timeSpeed, setTimeSpeed] = useState(0.5);
   const [paused, setPaused] = useState(false);
+  const [detailView, setDetailView] = useState<string | null>(null); // null = system overview, planet name = detail
   const planetPositions = useRef<Record<string, THREE.Vector3>>({});
 
   // Escape key unfocuses
@@ -184,22 +185,40 @@ export function SolarSystemView() {
       </div>
 
       <div style={S.panel} className="scene-panel" data-testid="solar-system-panel">
-        <div style={S.panelHdr}>Observer Frame</div>
-
-        {focused && (
-          <button onClick={() => setFocused(false)} style={S.backBtn}>
-            {"\u2190"} Back to Overview
+        {/* Sub-navigation: System Overview + Planet Detail tabs */}
+        <div style={S.subNav}>
+          <button onClick={() => { setDetailView(null); setSelectedMoon(null); }}
+            style={{ ...S.subTab, ...(detailView === null ? S.subTabActive : {}) }}>
+            System
           </button>
-        )}
-
-        <div style={S.btns}>
           {["Sun", ...planets.map((p) => p.name)].map((n) => (
-            <button key={n} onClick={() => setSelected(n)} style={{ ...S.btn, ...(selected === n ? S.btnA : {}) }}>{n}</button>
+            <button key={n}
+              onClick={() => { setDetailView(n); setSelected(n); setSelectedMoon(null); }}
+              style={{ ...S.subTab, ...(detailView === n ? S.subTabActive : {}), color: PLANETS.find(([pn]) => pn === n)?.[4] || "#ffd54f" }}>
+              {n.slice(0, 3)}
+            </button>
           ))}
         </div>
 
+        {/* System overview mode */}
+        {detailView === null && (
+          <>
+            <div style={S.panelHdr}>Solar System Overview</div>
+            <div style={S.btns}>
+              {["Sun", ...planets.map((p) => p.name)].map((n) => (
+                <button key={n} onClick={() => { setSelected(n); setDetailView(n); }} style={{ ...S.btn, ...(selected === n ? S.btnA : {}) }}>{n}</button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Planet detail mode */}
+        {detailView !== null && (
+          <div style={S.panelHdr}>{detailView} {detailView === "Pluto" ? "(Dwarf Planet)" : ""}</div>
+        )}
+
         <div style={S.info}>
-          <div style={S.infoName}>{selected}</div>
+          <div style={S.infoName}>{detailView || selected}</div>
           {selected === "Sun" ? (
             <div style={S.infoD}>
               <Row l="d\u03C4/dt" v={sunD ? `1 - ${(1 - sunD.dilation_factor).toExponential(3)}` : "\u2014"} />
@@ -232,6 +251,25 @@ export function SolarSystemView() {
             </div>
           ) : null}
         </div>
+
+        {/* Moon buttons when in detail view */}
+        {detailView && (() => {
+          const planetMoons = MOONS.filter(([, parent]) => parent === detailView);
+          if (planetMoons.length === 0) return null;
+          return (
+            <div style={S.moonSection}>
+              <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600, marginBottom: "4px" }}>Moons ({planetMoons.length})</div>
+              <div style={S.btns}>
+                {planetMoons.map(([mName]) => (
+                  <button key={mName} onClick={() => setSelectedMoon(selectedMoon === mName ? null : mName)}
+                    style={{ ...S.btn, ...(selectedMoon === mName ? { ...S.btnA, borderColor: "#a78bfa" } : {}) }}>
+                    {mName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Selected moon info */}
         {selectedMoon && (() => {
@@ -848,6 +886,10 @@ const S: Record<string, React.CSSProperties> = {
   compHdr: { fontSize: "11px", color: "#64748b", letterSpacing: "0.5px", marginBottom: "2px" },
   compRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0", borderBottom: "1px solid #0a0f18" },
   note: { fontSize: "10px", color: "#94a3b8", fontStyle: "italic", padding: "4px 0" },
+  subNav: { display: "flex", flexWrap: "wrap", gap: "2px", marginBottom: "8px", borderBottom: "1px solid #1e293b", paddingBottom: "8px" },
+  subTab: { padding: "3px 6px", border: "none", borderRadius: "3px", background: "transparent", color: "#64748b", cursor: "pointer", fontSize: "10px", fontFamily: "inherit", fontWeight: 600, transition: "all 0.15s" },
+  subTabActive: { background: "#1e293b", color: "#e2e8f0 !important" },
+  moonSection: { background: "#0a0f18", borderRadius: "6px", padding: "8px", border: "1px solid #1e293b30" },
   speedControl: { background: "#0a0f18", borderRadius: "6px", padding: "8px", display: "flex", flexDirection: "column", gap: "4px" },
   pauseBtn: { padding: "2px 8px", border: "1px solid #1e293b", borderRadius: "4px", background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: "12px", fontFamily: "inherit" },
   backBtn: {
