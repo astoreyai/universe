@@ -24,13 +24,16 @@ const lensingFragmentShader = `
     // Simplified screen-space: deflect inversely with distance
     float innerFade = smoothstep(uRadius * 0.15, uRadius * 0.5, dist);
     float outerFade = 1.0 - smoothstep(0.0, uRadius, dist);
-    float deflection = uStrength / (dist * 80.0) * innerFade * outerFade;
+    float deflection = uStrength / (dist * 8.0) * innerFade * outerFade;
 
-    // Tangential stretching (Einstein ring effect)
+    // Tangential stretching (Einstein ring / caustic pattern)
     vec2 tangent = vec2(-dir.y, dir.x) / dist;
-    float ringPhase = sin(dist * 40.0 - 1.5) * 0.3;
+    float ringPhase = sin(dist * 20.0 - 1.0) * 0.5;
 
-    uv += normalize(dir) * deflection + tangent * deflection * ringPhase * 0.3;
+    // Radial magnification — compress background near photon sphere
+    float magnification = 1.0 + uStrength * 0.3 / (dist * 10.0 + 0.1) * outerFade;
+
+    uv += normalize(dir) * deflection * magnification + tangent * deflection * ringPhase * 0.4;
   }
 `;
 
@@ -77,7 +80,7 @@ function LensingTracker({ mass }: { mass: number }) {
     effectRef.current.uniforms.get("uCenter")!.value.set(cx, cy);
   });
 
-  const strength = Math.min(mass * 0.08, 2.0);
+  const strength = Math.min(mass * 0.5, 8.0);
 
   return <GravLens ref={effectRef} strength={strength} radius={0.5} />;
 }
@@ -338,20 +341,38 @@ function BlackHoleScene({
         <meshBasicMaterial color="#ffd54f" transparent opacity={0.5} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Accretion disk — color-coded by dilation */}
+      {/* Accretion disk — temperature gradient (hot blue-white inner, cooler red outer) */}
       <group ref={accretionRef} rotation={[Math.PI * 0.08, 0, 0]}>
-        {dilationRings.map((ring, i) => (
-          <mesh key={i} rotation={[Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[ring.radius * SCALE, (ring.radius + 0.35) * SCALE, 96]} />
-            <meshBasicMaterial color={dilationToColor(ring.dilation)} transparent opacity={0.12 + ring.dilation * 0.35} side={THREE.DoubleSide} />
-          </mesh>
-        ))}
-        {/* Hot inner edge — brighter emission near ISCO */}
+        {dilationRings.map((ring, i) => {
+          const t = (ring.radius - 1.5) / 8.5; // 0=inner, 1=outer
+          // Temperature color: white-blue (inner) → orange → dark red (outer)
+          const tempColor = t < 0.2 ? "#c0d8ff" : t < 0.4 ? "#ffd54f" : t < 0.7 ? "#ff8f00" : "#cc3300";
+          return (
+            <mesh key={i} rotation={[Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[ring.radius * SCALE, (ring.radius + 0.35) * SCALE, 96]} />
+              <meshBasicMaterial color={tempColor} transparent opacity={0.15 + (1 - t) * 0.35} side={THREE.DoubleSide} />
+            </mesh>
+          );
+        })}
+        {/* Hot ISCO inner edge — brightest emission */}
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <ringGeometry args={[1.5 * SCALE, 2.5 * SCALE, 96]} />
-          <meshBasicMaterial color="#ff6f00" transparent opacity={0.2} side={THREE.DoubleSide} />
+          <meshBasicMaterial color="#aaccff" transparent opacity={0.3} side={THREE.DoubleSide} />
         </mesh>
       </group>
+      {/* Relativistic jet hints along spin axis */}
+      {spin > 0.1 && (
+        <group>
+          <mesh position={[0, 4, 0]}>
+            <coneGeometry args={[0.3 + spin * 0.3, 6, 16, 1, true]} />
+            <meshBasicMaterial color="#60a5fa" transparent opacity={0.06 + spin * 0.04} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, -4, 0]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.3 + spin * 0.3, 6, 16, 1, true]} />
+            <meshBasicMaterial color="#60a5fa" transparent opacity={0.06 + spin * 0.04} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      )}
 
       {/* Observer marker — pulsing golden sphere */}
       <group ref={observerRef} position={[observerRs * SCALE, 0, 0]}>

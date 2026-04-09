@@ -38,8 +38,7 @@ const SUN_R = 0.5;
 const MIN_R = 0.12;
 const TIME_SPEED = 0.5;
 const MOON_ORBIT_SCALE = 0.000003; // Scale down moon orbital radii to scene units
-const MOON_SIZE_SCALE = 0.00015; // Moon body size
-const MIN_MOON_R = 0.04;
+const MIN_MOON_R = 0.03;
 const MIN_MOON_ORBIT = 0.25;
 
 interface PData {
@@ -256,7 +255,7 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onH
     if (gRef.current) {
       const a = (clock.getElapsedTime() * TIME_SPEED) / d.period + d.au * 1.5;
       gRef.current.position.x = Math.cos(a) * orbR;
-      gRef.current.position.y = Math.sin(a) * Math.sin(inclRad) * orbR * 0.05; // subtle vertical offset from inclination
+      gRef.current.position.y = Math.sin(a) * Math.sin(inclRad) * orbR * 0.4; // visible inclination offset
       gRef.current.position.z = Math.sin(a) * orbR;
     }
     if (mRef.current) mRef.current.rotation.y += 0.008;
@@ -353,7 +352,8 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onH
 
 function MoonBody({ name, orbitR, radius, color, parentR }: { name: string; orbitR: number; radius: number; color: string; parentR: number }) {
   const ref = useRef<THREE.Group>(null);
-  const moonR = Math.max(radius * MOON_SIZE_SCALE, MIN_MOON_R);
+  // Log-scale moon radius so large moons (Ganymede 2634km) are visibly bigger than tiny ones (Deimos 6km)
+  const moonR = Math.max(Math.log10(radius + 1) * 0.04, MIN_MOON_R);
   const orbitSceneR = Math.max(orbitR * MOON_ORBIT_SCALE + parentR * 1.3, parentR + MIN_MOON_ORBIT);
 
   const moonTex = useLoader(THREE.TextureLoader, name === "Moon" ? `${BASE}textures/moon.jpg` : `${BASE}textures/mercury.jpg`);
@@ -399,7 +399,7 @@ function OrbitRing({ r, incl, active }: { r: number; incl: number; active: boole
       const a = (i / 128) * Math.PI * 2;
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
-      const y = Math.sin(a) * Math.sin(inclRad) * r * 0.05;
+      const y = Math.sin(a) * Math.sin(inclRad) * r * 0.4;
       p.push(new THREE.Vector3(x, y, z));
     }
     return p;

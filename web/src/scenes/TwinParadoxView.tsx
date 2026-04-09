@@ -305,34 +305,39 @@ function TravelerClock({ gamma }: { gamma: number }) {
   return <div ref={ref} style={clockStyle("#f59e0b")}>00:00:00</div>;
 }
 
-// Spacetime grid showing Lorentz contraction
+// Spacetime grid showing Lorentz contraction — contracts along X near traveler
 function SpacetimeGrid({ beta }: { beta: number }) {
   const contractFactor = Math.sqrt(1 - beta * beta);
+
   const gridLines = useMemo(() => {
-    const lines: THREE.Vector3[][] = [];
-    // Horizontal grid lines (time-like, unaffected)
+    const lines: { pts: THREE.Vector3[]; contracted: boolean }[] = [];
+    // Horizontal grid lines (unaffected by contraction)
     for (let z = -6; z <= 6; z += 2) {
-      lines.push([new THREE.Vector3(-12, -2, z), new THREE.Vector3(12, -2, z)]);
+      lines.push({ pts: [new THREE.Vector3(-12, -2, z), new THREE.Vector3(12, -2, z)], contracted: false });
     }
-    // Vertical grid lines (space-like, contracted near traveler)
+    // Vertical grid lines (space-like) — contracted by Lorentz factor
     for (let x = -12; x <= 12; x += 2) {
-      lines.push([new THREE.Vector3(x, -2, -6), new THREE.Vector3(x, -2, 6)]);
+      const cx = x * contractFactor; // Apply Lorentz contraction
+      lines.push({ pts: [new THREE.Vector3(cx, -2, -6), new THREE.Vector3(cx, -2, 6)], contracted: true });
     }
     return lines;
-  }, []);
+  }, [contractFactor]);
 
   return (
     <group>
-      {gridLines.map((pts, i) => (
-        <line key={i}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              args={[new Float32Array(pts.flatMap((p) => [p.x, p.y, p.z])), 3]}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial color="#1e293b" transparent opacity={0.25} />
-        </line>
+      {gridLines.map((line, i) => (
+        <primitive key={`${i}-${contractFactor.toFixed(3)}`} object={(() => {
+          const geom = new THREE.BufferGeometry();
+          geom.setAttribute("position", new THREE.BufferAttribute(
+            new Float32Array(line.pts.flatMap((p) => [p.x, p.y, p.z])), 3
+          ));
+          const mat = new THREE.LineBasicMaterial({
+            color: line.contracted ? "#3b82f6" : "#1e293b",
+            transparent: true,
+            opacity: line.contracted ? 0.3 : 0.2,
+          });
+          return new THREE.Line(geom, mat);
+        })()} />
       ))}
     </group>
   );
