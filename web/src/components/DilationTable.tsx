@@ -129,7 +129,7 @@ export function DilationTable() {
 
           {/* Background grid circles */}
           {[80, 140, 200].map((r) => (
-            <circle key={r} cx={300} cy={250} r={r} fill="none" stroke="#1e293b" strokeWidth={0.5} />
+            <circle key={r} cx={300} cy={250} r={r} fill="none" stroke="#1e3a5f" strokeWidth={1} opacity={0.25} />
           ))}
 
           {/* Title */}
@@ -146,7 +146,7 @@ export function DilationTable() {
             const dist = 60 + i * 18; // Spread outward
             const cx = 300 + Math.cos(angle) * dist;
             const cy = 250 + Math.sin(angle) * dist;
-            const radius = 8 + b.logSeverity * 60; // Visual size based on dilation
+            const radius = 12 + b.logSeverity * 80; // Visual size based on dilation
             const isHovered = hoveredBody === b.name;
             const isRef = b.name === referenceBody;
             const relDiff = (b.dilation_factor - refFactor) * 86_400 * 1e6;
@@ -379,12 +379,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center", justifyContent: "center",
   },
   panel: {
-    width: "300px", background: "#111827", border: "1px solid #1e293b",
+    width: "300px", background: "rgba(17,24,39,0.85)", backdropFilter: "blur(12px)",
+    border: "1px solid #1e293b",
     borderRadius: "8px", padding: "14px", marginLeft: "10px",
     overflow: "auto", display: "flex", flexDirection: "column", gap: "10px",
   },
   panelTitle: {
-    fontSize: "13px", fontWeight: 600, color: "#94a3b8",
+    fontSize: "13px", fontWeight: 600, color: "#a78bfa",
     letterSpacing: "1px", textTransform: "uppercase" as const,
   },
   controls: { display: "flex", alignItems: "center", gap: "8px" },
@@ -397,6 +398,7 @@ const styles: Record<string, React.CSSProperties> = {
   dataRow: {
     background: "#0f172a", borderRadius: "6px", padding: "8px",
     cursor: "default", transition: "background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   dataRowHover: {
     boxShadow: "0 2px 12px rgba(148,163,184,0.15)",
@@ -425,6 +427,7 @@ const styles: Record<string, React.CSSProperties> = {
   compSection: {
     background: "#0f172a", borderRadius: "6px", padding: "8px",
     display: "flex", flexDirection: "column", gap: "4px",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   compTitle: { fontSize: "10px", color: "#64748b", fontWeight: 600, letterSpacing: "0.5px" },
   compSubtitle: { fontSize: "9px", color: "#475569", fontStyle: "italic", marginBottom: "2px" },

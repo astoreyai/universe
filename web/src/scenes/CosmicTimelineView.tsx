@@ -154,9 +154,9 @@ export function CosmicTimelineView() {
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.0,
           }}
-          style={{ background: "#010108" }}
+          style={{ background: "radial-gradient(ellipse at center, #0a1628 0%, #020208 100%)" }}
         >
-          <color attach="background" args={["#010108"]} />
+          <color attach="background" args={["#020208"]} />
           <ambientLight intensity={0.03} />
           <CosmicScene
             epochAge={epochAge}
@@ -976,7 +976,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   panel: {
     width: "280px",
-    background: "#111827",
+    background: "rgba(17,24,39,0.85)",
+    backdropFilter: "blur(12px)",
     border: "1px solid #1e293b",
     borderRadius: "8px",
     padding: "14px",
@@ -989,7 +990,7 @@ const styles: Record<string, React.CSSProperties> = {
   panelTitle: {
     fontSize: "13px",
     fontWeight: 600,
-    color: "#94a3b8",
+    color: "#3b82f6",
     letterSpacing: "1px",
     textTransform: "uppercase" as const,
   },
@@ -1030,6 +1031,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "4px",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   resultRow: {
     display: "flex",
@@ -1045,6 +1047,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "4px",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   paramTitle: {
     fontSize: "11px",
@@ -1071,6 +1074,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "6px",
     padding: "8px",
     overflow: "auto",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   table: {
     width: "100%",
@@ -1102,6 +1106,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "6px",
     padding: "10px",
     textAlign: "center",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   flrwTitle: {
     fontSize: "10px",
@@ -1128,5 +1133,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#94a3b8",
     lineHeight: "1.5",
     borderLeft: "3px solid #3b82f6",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
 };
