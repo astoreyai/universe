@@ -163,7 +163,7 @@ export function DilationTable() {
                 onPointerLeave={() => setHoveredBody(null)}
                 onClick={() => setReferenceBody(b.isExtreme ? referenceBody : b.name)}
                 style={{ cursor: b.isExtreme ? "not-allowed" : "pointer" }}
-                opacity={b.isExtreme ? 0.5 : 1}
+                opacity={b.isExtreme ? 0.7 : 1}
               >
                 {/* Tooltip for extreme objects */}
                 {b.isExtreme && <title>Cannot be used as reference frame</title>}

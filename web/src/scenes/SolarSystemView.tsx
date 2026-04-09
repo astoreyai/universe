@@ -466,7 +466,9 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
         onPointerLeave={() => onHover(null)}
       >
         <sphereGeometry args={[sz, 64, 64]} />
-        <meshBasicMaterial map={tex} />
+        {d.name === "Uranus" || d.name === "Neptune" || d.name === "Pluto"
+          ? <meshBasicMaterial color={d.color} />
+          : <meshBasicMaterial map={tex} />}
       </mesh>
 
       {/* Earth night lights layer */}

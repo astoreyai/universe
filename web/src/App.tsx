@@ -185,5 +185,9 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#ef4444",
     textAlign: "center",
     padding: "40px",
+    background: "#1e0f0f",
+    borderRadius: "8px",
+    border: "1px solid #ef4444",
+    margin: "20px",
   },
 };
