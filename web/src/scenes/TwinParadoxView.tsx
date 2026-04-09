@@ -280,7 +280,10 @@ function TravelerShip({ beta, gamma }: { beta: number; gamma: number }) {
         <meshBasicMaterial color="#f59e0b" transparent opacity={0.2} />
       </mesh>
       <Html position={[0, 1.1, 0]} center style={{ pointerEvents: "none" }}>
-        <div style={labelStyle("#f59e0b")}>Traveler ({(beta * 100).toFixed(1)}% c)</div>
+        <div style={labelStyle("#f59e0b")}>
+          <div>Traveler ({(beta * 100).toFixed(1)}% c)</div>
+          <div style={{ fontSize: "8px", color: "#a78bfa" }}>{"\u03B3"} = {gamma < 100 ? gamma.toFixed(3) : gamma.toExponential(2)}</div>
+        </div>
       </Html>
       {/* Dilated clock */}
       <Html position={[0, -1.0, 0]} center style={{ pointerEvents: "none" }}>

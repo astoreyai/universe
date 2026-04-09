@@ -176,6 +176,21 @@ export function SolarSystemView() {
           ) : null}
         </div>
 
+        <div style={S.comp}>
+          <div style={S.compHdr}>Differential Aging vs {selected}</div>
+          {planets.filter((p) => p.name !== selected).map((p) => {
+            const d = engine.compareBodies(selected, p.name);
+            return (
+              <div key={p.name} style={S.compRow}>
+                <span style={{ color: p.color }}>{"\u25CF"} {p.name}</span>
+                <span style={{ color: d > 0 ? "#34d399" : "#f87171", fontVariantNumeric: "tabular-nums" }}>
+                  {d > 0 ? "+" : ""}{d.toFixed(2)} {"\u03BCs"}/day
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
         <div style={S.toggles}>
           <label style={S.toggle}>
             <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
@@ -191,19 +206,8 @@ export function SolarSystemView() {
           </label>
         </div>
 
-        <div style={S.comp}>
-          <div style={S.compHdr}>Differential Aging vs {selected}</div>
-          {planets.filter((p) => p.name !== selected).map((p) => {
-            const d = engine.compareBodies(selected, p.name);
-            return (
-              <div key={p.name} style={S.compRow}>
-                <span style={{ color: p.color }}>{"\u25CF"} {p.name}</span>
-                <span style={{ color: d > 0 ? "#34d399" : "#f87171", fontVariantNumeric: "tabular-nums" }}>
-                  {d > 0 ? "+" : ""}{d.toFixed(2)} {"\u03BCs"}/day
-                </span>
-              </div>
-            );
-          })}
+        <div style={S.note}>
+          Asteroid belt: 2.1{"\u2013"}3.3 AU between Mars and Jupiter
         </div>
       </div>
     </div>
@@ -617,6 +621,7 @@ const S: Record<string, React.CSSProperties> = {
   comp: { display: "flex", flexDirection: "column", gap: "4px" },
   compHdr: { fontSize: "11px", color: "#64748b", letterSpacing: "0.5px", marginBottom: "2px" },
   compRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0", borderBottom: "1px solid #0a0f18" },
+  note: { fontSize: "9px", color: "#475569", fontStyle: "italic", padding: "4px 0" },
   backBtn: {
     padding: "6px 12px", border: "1px solid #3b82f6", borderRadius: "6px",
     background: "#1e293b", color: "#60a5fa", cursor: "pointer",
