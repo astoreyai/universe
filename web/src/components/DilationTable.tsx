@@ -107,8 +107,8 @@ export function DilationTable() {
 
             return (
               <g key={b.name}
-                onMouseEnter={() => setHoveredBody(b.name)}
-                onMouseLeave={() => setHoveredBody(null)}
+                onPointerEnter={() => setHoveredBody(b.name)}
+                onPointerLeave={() => setHoveredBody(null)}
                 onClick={() => setReferenceBody(b.name.includes("Neutron") || b.name.includes("Black") ? referenceBody : b.name)}
                 style={{ cursor: b.name.includes("Neutron") || b.name.includes("Black") ? "default" : "pointer" }}
               >
@@ -182,8 +182,8 @@ export function DilationTable() {
             const color = BODY_COLORS[b.name] || "#94a3b8";
             return (
               <div key={b.name} style={{ ...styles.dataRow, ...(isRef ? styles.refRow : {}) }}
-                onMouseEnter={() => setHoveredBody(b.name)}
-                onMouseLeave={() => setHoveredBody(null)}
+                onPointerEnter={() => setHoveredBody(b.name)}
+                onPointerLeave={() => setHoveredBody(null)}
               >
                 <div style={styles.bodyHeader}>
                   <span style={{ color }}>{"\u25CF"} {b.name}</span>

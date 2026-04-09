@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState, useCallback } from "react";
+import React, { useRef, useMemo, useState, useCallback, useEffect } from "react";
 import { Canvas, useFrame, useLoader, useThree, ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Line, Html, Stars as DreiStars } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
@@ -104,6 +104,13 @@ export function SolarSystemView() {
   const [timeSpeed, setTimeSpeed] = useState(0.5);
   const [paused, setPaused] = useState(false);
   const planetPositions = useRef<Record<string, THREE.Vector3>>({});
+
+  // Escape key unfocuses
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFocused(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const planets: PData[] = useMemo(() => {
     try {
