@@ -76,7 +76,7 @@ function ageToRedshift(table: LookupEntry[], ageGyr: number): number {
 // ─── Main component ────────────────────────────────────────────────────────
 
 export function CosmicTimelineView() {
-  const [epochAge, setEpochAge] = useState(6.9); // Gyr — default to z~1
+  const [epochAge, setEpochAge] = useState(13.8); // Gyr — default to present
   const [showHubble, setShowHubble] = useState(false);
   const [showParticles, setShowParticles] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
@@ -112,6 +112,7 @@ export function CosmicTimelineView() {
         dilation: engine.cosmologicalDilation(z),
         lookback: engine.lookbackTimeGyr(z),
         comoving: engine.comovingDistanceGly(z),
+        age: engine.ageAtRedshiftGyr(z),
       })),
     []
   );
@@ -257,7 +258,8 @@ export function CosmicTimelineView() {
             </thead>
             <tbody>
               {milestones.map((m) => (
-                <tr key={m.z}>
+                <tr key={m.z} onClick={() => setEpochAge(m.age)} style={{ cursor: "pointer" }}
+                  title={`Jump to z=${m.z} (${m.age.toFixed(2)} Gyr)`}>
                   <td style={styles.td}>{m.z}</td>
                   <td style={styles.tdMono}>{m.a}</td>
                   <td style={styles.tdMono}>{m.lookback.toFixed(1)}</td>

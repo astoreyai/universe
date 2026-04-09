@@ -127,6 +127,7 @@ export function BlackHoleView() {
             spin={spin}
             gm={gm}
             observerRs={observerR}
+            dilation={dilation}
           />
           <DreiStars radius={60} depth={50} count={3000} factor={2.5} saturation={0} fade speed={0.3} />
           <EffectComposer>
@@ -286,11 +287,13 @@ function BlackHoleScene({
   spin,
   gm,
   observerRs,
+  dilation,
 }: {
   rs: number;
   spin: number;
   gm: number;
   observerRs: number;
+  dilation: number;
 }) {
   const accretionRef = useRef<THREE.Group>(null);
   const observerRef = useRef<THREE.Group>(null);
@@ -366,20 +369,27 @@ function BlackHoleScene({
         </group>
       )}
 
-      {/* Observer marker — pulsing golden sphere */}
+      {/* Ergosphere ring (Kerr metric: r_ergo = 2GM/c² at equator = rs at equator) */}
+      {spin > 0.01 && (
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[SCALE * 0.98, (1 + spin * 0.5) * SCALE * 1.02, 64]} />
+          <meshBasicMaterial color="#a78bfa" transparent opacity={0.12} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+
+      {/* Observer marker — color-coded by dilation severity */}
       <group ref={observerRef} position={[observerRs * SCALE, 0, 0]}>
         <mesh>
           <sphereGeometry args={[0.12, 16, 16]} />
-          <meshBasicMaterial color="#ffd54f" />
+          <meshBasicMaterial color={dilation > 0.8 ? "#34d399" : dilation > 0.5 ? "#fbbf24" : "#ef4444"} />
         </mesh>
-        {/* Glow around observer */}
         <mesh>
           <sphereGeometry args={[0.2, 16, 16]} />
-          <meshBasicMaterial color="#ffd54f" transparent opacity={0.15} />
+          <meshBasicMaterial color={dilation > 0.8 ? "#34d399" : dilation > 0.5 ? "#fbbf24" : "#ef4444"} transparent opacity={0.15} />
         </mesh>
-        <Html position={[0, 0.35, 0]} center style={{ pointerEvents: "none" }}>
-          <div style={{ color: "#ffd54f", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.85)", padding: "2px 8px", borderRadius: "4px", whiteSpace: "nowrap", border: "1px solid #ffd54f30", backdropFilter: "blur(4px)" }}>
-            Observer ({observerRs.toFixed(1)}r{"\u209b"})
+        <Html position={[0, 0.4, 0]} center style={{ pointerEvents: "none" }}>
+          <div style={{ color: dilation > 0.8 ? "#34d399" : dilation > 0.5 ? "#fbbf24" : "#ef4444", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.85)", padding: "2px 8px", borderRadius: "4px", whiteSpace: "nowrap", border: `1px solid ${dilation > 0.8 ? "#34d39930" : "#ef444430"}`, backdropFilter: "blur(4px)" }}>
+            Observer ({observerRs.toFixed(1)}r{"\u209b"}) | d{"\u03C4"}/dt = {dilation.toFixed(4)}
           </div>
         </Html>
       </group>

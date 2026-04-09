@@ -53,11 +53,10 @@ export function DilationTable() {
   // Compute radial chart data — use log scale for dilation severity
   const chartBodies = useMemo(() => {
     return allBodies.map((b) => {
-      const shift = 1 - b.dilation_factor; // 0 = flat spacetime, ~1 = event horizon
-      // Log-scale the severity so tiny differences (Earth ~7e-10) and huge ones (NS ~0.23) both show
+      const shift = 1 - b.dilation_factor;
       const logSeverity = shift > 0 ? Math.max(Math.log10(shift) + 10, 0) / 10 : 0;
       return { ...b, shift, logSeverity, color: BODY_COLORS[b.name] || "#94a3b8" };
-    });
+    }).sort((a, b) => b.logSeverity - a.logSeverity); // strongest dilation first
   }, [allBodies]);
 
   return (
