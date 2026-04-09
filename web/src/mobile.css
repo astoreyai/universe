@@ -1,7 +1,7 @@
-/* Mobile responsive overrides for scene layouts */
+/* Mobile responsive overrides */
 
 @media (max-width: 768px) {
-  /* Allow vertical scrolling on mobile */
+  /* Allow vertical scrolling */
   html, body, #root {
     overflow: auto !important;
     height: auto !important;
@@ -12,46 +12,104 @@
   .scene-layout {
     flex-direction: column !important;
     height: auto !important;
-    min-height: calc(100vh - 130px);
+    min-height: calc(100vh - 100px);
   }
 
   .scene-canvas {
-    min-height: 50vh !important;
-    height: 50vh !important;
+    min-height: 45vh !important;
+    height: 45vh !important;
     flex: none !important;
+    width: 100% !important;
   }
 
   .scene-panel {
     width: 100% !important;
     max-width: 100% !important;
     margin-left: 0 !important;
-    margin-top: 8px !important;
+    margin-top: 6px !important;
     max-height: none !important;
+    padding: 10px !important;
   }
 
-  /* Compact header on mobile */
+  /* Compact header */
   header {
-    padding: 8px 12px 4px !important;
+    padding: 6px 10px 2px !important;
   }
 
   header h1 {
-    font-size: 18px !important;
-    letter-spacing: 3px !important;
+    font-size: 16px !important;
+    letter-spacing: 2px !important;
   }
 
-  /* Wrap nav tabs */
+  header p {
+    font-size: 9px !important;
+  }
+
+  /* Nav tabs: 2 rows on small screens */
   nav {
-    padding: 4px 8px !important;
+    padding: 4px 6px !important;
     gap: 3px !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
   }
 
   nav button {
-    padding: 5px 8px !important;
+    padding: 4px 6px !important;
+    font-size: 9px !important;
+    letter-spacing: 0 !important;
+  }
+
+  /* Compact main */
+  main {
+    padding: 4px 6px 6px !important;
+    overflow-x: hidden !important;
+  }
+
+  /* SVG visualizations should scale properly */
+  svg {
+    max-width: 100% !important;
+  }
+
+  /* Tables: smaller text */
+  table {
     font-size: 10px !important;
   }
 
-  /* Compact main padding */
-  main {
-    padding: 4px 8px 8px !important;
+  th, td {
+    padding: 3px 4px !important;
+  }
+
+  /* Select dropdowns */
+  select {
+    font-size: 11px !important;
+    padding: 3px 6px !important;
+  }
+
+  /* Slider inputs */
+  input[type="range"] {
+    height: 20px !important;
+  }
+
+  /* Prevent horizontal overflow */
+  * {
+    max-width: 100vw;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .scene-canvas {
+    min-height: 35vh !important;
+    height: 35vh !important;
+  }
+
+  header h1 {
+    font-size: 14px !important;
+    letter-spacing: 1px !important;
+  }
+
+  nav button {
+    padding: 3px 5px !important;
+    font-size: 8px !important;
   }
 }

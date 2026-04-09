@@ -164,9 +164,9 @@ export function CosmicTimelineView() {
             showParticles={showParticles}
             showLabels={showLabels}
           />
-          <DreiStars radius={80} depth={60} count={3500} factor={3} saturation={0.05} fade speed={0.4} />
+          <DreiStars radius={80} depth={60} count={7000} factor={3} saturation={0.05} fade speed={0.4} />
           <EffectComposer>
-            <Bloom luminanceThreshold={0.3} luminanceSmoothing={0.9} intensity={1.0} mipmapBlur />
+            <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} intensity={1.5} mipmapBlur />
             <Vignette eskil={false} offset={0.15} darkness={0.75} />
           </EffectComposer>
           <OrbitControls enablePan maxDistance={50} minDistance={3} enableDamping dampingFactor={0.05} />
@@ -493,7 +493,7 @@ function LightConeSurface() {
         <meshBasicMaterial
           vertexColors
           transparent
-          opacity={0.1}
+          opacity={0.15}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
@@ -501,7 +501,7 @@ function LightConeSurface() {
       {/* Wireframe overlay */}
       <lineSegments>
         <wireframeGeometry args={[geometry]} />
-        <lineBasicMaterial color="#60a5fa" transparent opacity={0.06} />
+        <lineBasicMaterial color="#60a5fa" transparent opacity={0.1} />
       </lineSegments>
     </group>
   );
@@ -527,8 +527,8 @@ function MilestoneRings({ showLabels, epochAge }: { showLabels: boolean; epochAg
       {rings.map((m) => {
         // Glow when epoch slider is near this milestone
         const proximity = Math.max(0, 1 - Math.abs(epochAge - m.age) / 1.5);
-        const ringWidth = 0.04 + proximity * 0.06;
-        const ringOpacity = 0.4 + proximity * 0.5;
+        const ringWidth = 0.08 + proximity * 0.06;
+        const ringOpacity = 0.6 + proximity * 0.5;
         return (
         <group key={m.z}>
           <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, m.y, 0]}>
@@ -662,7 +662,7 @@ function EpochSlicePlane({ epochAge, sliceZ }: { epochAge: number; sliceZ: numbe
         <meshBasicMaterial
           color="#f59e0b"
           transparent
-          opacity={0.04}
+          opacity={0.08}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
@@ -673,7 +673,7 @@ function EpochSlicePlane({ epochAge, sliceZ }: { epochAge: number; sliceZ: numbe
         <meshBasicMaterial
           color="#f59e0b"
           transparent
-          opacity={0.4}
+          opacity={0.6}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -847,11 +847,11 @@ function ObserverMarker() {
   return (
     <group position={[0, SCENE_HEIGHT, 0]}>
       <mesh ref={ref}>
-        <sphereGeometry args={[0.12, 16, 16]} />
+        <sphereGeometry args={[0.2, 16, 16]} />
         <meshBasicMaterial color="#60a5fa" />
       </mesh>
       <mesh>
-        <sphereGeometry args={[0.2, 16, 16]} />
+        <sphereGeometry args={[0.35, 16, 16]} />
         <meshBasicMaterial color="#60a5fa" transparent opacity={0.15} />
       </mesh>
       <Html position={[0, 0.35, 0]} center style={{ pointerEvents: "none" }}>

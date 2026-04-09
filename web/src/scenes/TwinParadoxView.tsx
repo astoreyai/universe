@@ -77,9 +77,9 @@ export function TwinParadoxView() {
           <color attach="background" args={["#010108"]} />
           <ambientLight intensity={0.05} />
           <TwinScene beta={active.speed} gamma={results.gamma} />
-          <DreiStars radius={80} depth={60} count={4000} factor={3} saturation={0.1} fade speed={0.4} />
+          <DreiStars radius={80} depth={60} count={7000} factor={3} saturation={0.1} fade speed={0.4} />
           <EffectComposer>
-            <Bloom luminanceThreshold={0.3} luminanceSmoothing={0.9} intensity={0.8} mipmapBlur />
+            <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} intensity={1.3} mipmapBlur />
             <Vignette eskil={false} offset={0.15} darkness={0.75} />
           </EffectComposer>
           <OrbitControls enablePan maxDistance={30} minDistance={5} enableDamping dampingFactor={0.05} />
@@ -226,12 +226,12 @@ function EarthTwin({ gamma }: { gamma: number }) {
   return (
     <group position={[-4, 0, 0]}>
       <mesh ref={ref}>
-        <sphereGeometry args={[0.6, 32, 32]} />
-        <meshStandardMaterial color="#4a90d9" roughness={0.7} metalness={0.1} emissive="#4a90d9" emissiveIntensity={0.15} />
+        <sphereGeometry args={[0.9, 32, 32]} />
+        <meshStandardMaterial color="#4a90d9" roughness={0.7} metalness={0.1} emissive="#4a90d9" emissiveIntensity={0.25} />
       </mesh>
       {/* Atmosphere glow */}
       <mesh>
-        <sphereGeometry args={[0.72, 32, 32]} />
+        <sphereGeometry args={[1.08, 32, 32]} />
         <meshBasicMaterial color="#60a5fa" transparent opacity={0.08} />
       </mesh>
       <Html position={[0, 1.1, 0]} center style={{ pointerEvents: "none" }}>
@@ -296,8 +296,8 @@ function TravelerShip({ beta, gamma }: { beta: number; gamma: number }) {
       </mesh>
       {/* Engine glow */}
       <mesh position={[-0.4, 0, 0]}>
-        <sphereGeometry args={[0.15 + beta * 0.1, 16, 16]} />
-        <meshBasicMaterial color="#ff6f00" transparent opacity={0.5 + beta * 0.4} />
+        <sphereGeometry args={[0.25 + beta * 0.2, 16, 16]} />
+        <meshBasicMaterial color="#ff6f00" transparent opacity={0.7 + beta * 0.3} />
       </mesh>
       {/* Motion trail */}
       <mesh ref={trailRef as any} position={[-1.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
