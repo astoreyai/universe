@@ -274,13 +274,7 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onH
         onPointerLeave={() => onHover(null)}
       >
         <sphereGeometry args={[sz, 64, 64]} />
-        <meshStandardMaterial
-          map={tex}
-          roughness={0.8}
-          metalness={0.05}
-          emissive={selected || hovered ? d.color : "#000"}
-          emissiveIntensity={selected ? 0.3 : hovered ? 0.15 : 0}
-        />
+        <meshBasicMaterial map={tex} />
       </mesh>
 
       {/* Earth night lights layer */}
@@ -380,7 +374,11 @@ function MoonBody({ name, orbitR, radius, color, parentR, inclination }: {
       <group ref={ref}>
         <mesh>
           <sphereGeometry args={[moonR, 16, 16]} />
-          <meshStandardMaterial map={name === "Moon" ? moonTex : undefined} color={name === "Moon" ? undefined : color} roughness={0.9} metalness={0.05} emissive={color} emissiveIntensity={0.05} />
+          {name === "Moon" ? (
+            <meshBasicMaterial map={moonTex} />
+          ) : (
+            <meshBasicMaterial color={color} />
+          )}
         </mesh>
         <Html position={[0, moonR + 0.08, 0]} center style={{ pointerEvents: "none" }}>
           <div style={{ color: "#64748b", fontSize: "7px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{name}</div>
