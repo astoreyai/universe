@@ -130,7 +130,7 @@ export function BlackHoleView() {
     <div style={styles.container} className="scene-layout">
       <div style={styles.canvasWrapper} className="scene-canvas">
         <Canvas
-          camera={{ position: [0, 8, 12], fov: 50 }}
+          camera={{ position: [0, 6, 10], fov: 50 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
           style={{ background: "#010108" }}
         >
@@ -143,10 +143,10 @@ export function BlackHoleView() {
             observerRs={observerR}
             dilation={dilation}
           />
-          <DreiStars radius={60} depth={50} count={3000} factor={2.5} saturation={0} fade speed={0.3} />
+          <DreiStars radius={60} depth={50} count={6000} factor={4} saturation={0} fade speed={0.3} />
           <EffectComposer>
             <LensingTracker mass={mass} />
-            <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={1.2} mipmapBlur />
+            <Bloom luminanceThreshold={0.1} luminanceSmoothing={0.9} intensity={2.0} mipmapBlur />
             <Vignette eskil={false} offset={0.15} darkness={0.8} />
           </EffectComposer>
           <OrbitControls enablePan maxDistance={40} minDistance={2} enableDamping dampingFactor={0.05} />
@@ -378,6 +378,11 @@ function BlackHoleScene({
         <sphereGeometry args={[SCALE, 64, 64]} />
         <meshBasicMaterial color="#000000" />
       </mesh>
+      {/* Inner depth sphere for visual depth */}
+      <mesh>
+        <sphereGeometry args={[0.95, 64, 64]} />
+        <meshBasicMaterial color="#000008" />
+      </mesh>
 
       {/* Round 6 — Schwarzschild radius label at event horizon */}
       <Html position={[1, 0.5, 0]} center style={{ pointerEvents: "none" }}>
@@ -394,7 +399,7 @@ function BlackHoleScene({
       {/* Photon ring — thin bright ring at 1.5rₛ */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.48 * SCALE, 1.52 * SCALE, 64]} />
-        <meshBasicMaterial color="#ffd54f" transparent opacity={0.5} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#ffe082" transparent opacity={0.8} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Accretion disk — temperature gradient (hot blue-white inner, cooler red outer) */}
@@ -413,7 +418,7 @@ function BlackHoleScene({
         {/* Hot ISCO inner edge — brightest emission */}
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <ringGeometry args={[1.5 * SCALE, 2.5 * SCALE, 96]} />
-          <meshBasicMaterial color="#aaccff" transparent opacity={0.3} side={THREE.DoubleSide} />
+          <meshBasicMaterial color="#d4e4ff" transparent opacity={0.5} side={THREE.DoubleSide} />
         </mesh>
       </group>
       {/* Relativistic jet hints along spin axis */}

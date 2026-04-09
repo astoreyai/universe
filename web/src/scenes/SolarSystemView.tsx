@@ -41,9 +41,9 @@ const MOONS: [string, string, number, number, string, number][] = [
 
 const BASE = import.meta.env.BASE_URL;
 const AU = 10;
-const PLANET_SCALE = 0.0002;
+const PLANET_SCALE = 0.0006;
 const SUN_R = 0.5;
-const MIN_R = 0.12;
+const MIN_R = 0.25;
 const TIME_SPEED = 0.5;
 const MOON_ORBIT_SCALE = 0.000003; // Scale down moon orbital radii to scene units
 const MIN_MOON_R = 0.03;
@@ -139,7 +139,7 @@ export function SolarSystemView() {
   return (
     <div style={S.container} className="scene-layout">
       <div style={S.canvas} className="scene-canvas">
-        <Canvas camera={{ position: [0, 25, 35], fov: 45 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }} style={{ background: "#020208" }}>
+        <Canvas camera={{ position: [0, 15, 30], fov: 55 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }} style={{ background: "#020208" }}>
           <color attach="background" args={["#020208"]} />
           <ambientLight intensity={0.1} />
 
@@ -173,10 +173,10 @@ export function SolarSystemView() {
             </div>
           </Html>
 
-          <DreiStars radius={200} depth={150} count={5000} factor={3} saturation={0.1} fade speed={0.5} />
+          <DreiStars radius={200} depth={150} count={8000} factor={4} saturation={0.1} fade speed={0.5} />
 
           <EffectComposer>
-            <Bloom luminanceThreshold={0.4} luminanceSmoothing={0.9} intensity={0.8} mipmapBlur />
+            <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} intensity={1.5} mipmapBlur />
             <Vignette eskil={false} offset={0.2} darkness={0.7} />
           </EffectComposer>
 
@@ -296,7 +296,7 @@ function CameraController({ selected, focused, planetPositions }: {
   planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
 }) {
   const { camera } = useThree();
-  const targetPos = useRef(new THREE.Vector3(0, 25, 35));
+  const targetPos = useRef(new THREE.Vector3(0, 15, 30));
   const targetLook = useRef(new THREE.Vector3(0, 0, 0));
 
   useFrame(() => {
@@ -315,7 +315,7 @@ function CameraController({ selected, focused, planetPositions }: {
       targetPos.current.set(0, 3, 5);
       targetLook.current.set(0, 0, 0);
     } else {
-      targetPos.current.set(0, 25, 35);
+      targetPos.current.set(0, 15, 30);
       targetLook.current.set(0, 0, 0);
     }
 
@@ -354,10 +354,14 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
         <meshBasicMaterial color="#ffab00" transparent opacity={0.12} />
       </mesh>
       <mesh>
-        <sphereGeometry args={[SUN_R * 1.8, 32, 32]} />
+        <sphereGeometry args={[SUN_R * 3.0, 32, 32]} />
         <meshBasicMaterial color="#ff6f00" transparent opacity={0.04} />
       </mesh>
-      <pointLight position={[0, 0, 0]} intensity={3} color="#fff3e0" distance={200} decay={1.5} />
+      <mesh>
+        <sphereGeometry args={[SUN_R * 5.0, 32, 32]} />
+        <meshBasicMaterial color="#ff6f00" transparent opacity={0.02} />
+      </mesh>
+      <pointLight position={[0, 0, 0]} intensity={5} color="#fff3e0" distance={400} decay={1.5} />
       {selected && (
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <ringGeometry args={[SUN_R * 1.5, SUN_R * 1.6, 48]} />
