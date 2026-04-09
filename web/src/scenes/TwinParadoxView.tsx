@@ -385,7 +385,7 @@ function StreakingStars({ beta }: { beta: number }) {
 
 function formatDiff(s: number): string {
   const abs = Math.abs(s);
-  if (abs < 1e-3) return `${(abs * 1e6).toFixed(2)} \u03BCs`;
+  if (abs < 1e-3) return `${(abs * 1e6).toFixed(2)} \xB5s`;
   if (abs < 1) return `${(abs * 1e3).toFixed(2)} ms`;
   if (abs < 60) return `${abs.toFixed(3)} s`;
   if (abs < 3600) return `${(abs / 60).toFixed(1)} min`;

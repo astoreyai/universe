@@ -199,7 +199,7 @@ export function SolarSystemView() {
               <div key={p.name} style={S.compRow}>
                 <span style={{ color: p.color }}>{"\u25CF"} {p.name}</span>
                 <span style={{ color: d > 0 ? "#34d399" : "#f87171", fontVariantNumeric: "tabular-nums" }}>
-                  {d > 0 ? "+" : ""}{d.toFixed(2)} \u03BCs/day
+                  {d > 0 ? "+" : ""}{d.toFixed(2)} {"\u03BCs"}/day
                 </span>
               </div>
             );
@@ -594,7 +594,7 @@ function Row({ l, v }: { l: string; v: string }) {
 }
 
 function fmt(s: number): string {
-  if (s < 0.001) return `${(s * 1e6).toFixed(1)} \u03BCs`;
+  if (s < 0.001) return `${(s * 1e6).toFixed(1)} \xB5s`;
   if (s < 1) return `${(s * 1e3).toFixed(3)} ms`;
   return `${s.toFixed(3)} s`;
 }

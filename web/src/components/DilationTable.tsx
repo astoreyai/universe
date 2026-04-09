@@ -131,7 +131,7 @@ export function DilationTable() {
                       fill="#f1f5f9" fontSize={9} fontFamily="'JetBrains Mono', monospace">
                       {b.dilation_factor < 0.999
                         ? `d\u03C4/dt = ${b.dilation_factor.toFixed(4)}`
-                        : `1 - ${(1 - b.dilation_factor).toExponential(2)}`}
+                        : `1 \u2212 ${(1 - b.dilation_factor).toExponential(2)}`}
                     </text>
                   </g>
                 )}
@@ -187,7 +187,7 @@ export function DilationTable() {
                 <div style={styles.bodyDetail}>
                   <span>Lost/yr: {formatSecondsLost(b.seconds_lost_per_year)}</span>
                   <span style={{ color: relDiff > 0 ? "#34d399" : relDiff < 0 ? "#f87171" : "#94a3b8" }}>
-                    {isRef ? "REF" : formatMicroseconds(relDiff) + " \u03BCs/day"}
+                    {isRef ? "REF" : formatMicroseconds(relDiff) + "/day"}
                   </span>
                 </div>
                 {/* Visual severity bar */}
@@ -212,7 +212,7 @@ export function DilationTable() {
               <div key={`${a}-${b}`} style={styles.compRow}>
                 <span style={styles.compLabel}>{a} vs {b}</span>
                 <span style={{ ...styles.compValue, color: diff > 0 ? "#34d399" : "#f87171" }}>
-                  {diff > 0 ? "+" : ""}{diff.toFixed(2)} \u03BCs/day
+                  {diff > 0 ? "+" : ""}{diff.toFixed(2)} {"\u03BCs"}/day
                 </span>
               </div>
             );
@@ -224,7 +224,7 @@ export function DilationTable() {
 }
 
 function formatSecondsLost(s: number): string {
-  if (s < 0.001) return `${(s * 1e6).toFixed(1)} \u03BCs`;
+  if (s < 0.001) return `${(s * 1e6).toFixed(1)} \xB5s`;
   if (s < 1) return `${(s * 1e3).toFixed(3)} ms`;
   if (s < 3600) return `${s.toFixed(3)} s`;
   return `${(s / 3600).toFixed(1)} hr`;
@@ -234,7 +234,7 @@ function formatMicroseconds(us: number): string {
   const abs = Math.abs(us);
   const sign = us >= 0 ? "+" : "-";
   if (abs < 0.001) return `${sign}${(abs * 1e3).toFixed(2)} ns`;
-  if (abs < 1000) return `${sign}${abs.toFixed(2)}`;
+  if (abs < 1000) return `${sign}${abs.toFixed(2)} \xB5s`;
   return `${sign}${(abs / 1e3).toFixed(2)} ms`;
 }
 
