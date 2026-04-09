@@ -174,6 +174,13 @@ export function SolarSystemView() {
             </div>
           </Html>
 
+          {/* Scaling disclaimer */}
+          <Html position={[AU, -2.5, 0]} center style={{ pointerEvents: "none" }}>
+            <div style={{ color: "#64748b", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", textAlign: "center", width: "200px", lineHeight: "1.3" }}>
+              Sizes: {"\u221A"}-scaled for visibility. Real planets are much smaller relative to orbits.
+            </div>
+          </Html>
+
           <DreiStars radius={200} depth={150} count={8000} factor={4} saturation={0.1} fade speed={0.5} />
 
           <EffectComposer>
@@ -237,9 +244,10 @@ export function SolarSystemView() {
               {MOONS.filter((m) => m[1] === selP.name).length > 0 && (
                 <Row l="Moons" v={MOONS.filter((m) => m[1] === selP.name).map((m) => m[0]).join(", ")} />
               )}
-              {/* Round 7 — Surface temperature & atmosphere */}
-              <Row l="Surface temp" v={getSurfaceTemp(selP.name)} />
-              <Row l="Atmosphere" v={getAtmosphere(selP.name)} />
+              {/* Relativity note */}
+              <div style={{ fontSize: "10px", color: "#a78bfa", marginTop: "6px", fontStyle: "italic", lineHeight: "1.4", borderLeft: "2px solid #a78bfa30", paddingLeft: "6px" }}>
+                {getRelativityNote(selP.name)}
+              </div>
               {/* Round 9 — Dwarf planet label for Pluto */}
               {selP.name === "Pluto" && (
                 <>
@@ -323,6 +331,9 @@ export function SolarSystemView() {
           </div>
           <input type="range" min="0.1" max="5" step="0.1" value={timeSpeed}
             onChange={(e) => setTimeSpeed(parseFloat(e.target.value))} style={{ width: "100%", accentColor: "#3b82f6" }} />
+          <div style={{ fontSize: "9px", color: "#475569", textAlign: "center" as const }}>
+            1 second {"\u2248"} {Math.round(timeSpeed * 365.25)} days
+          </div>
         </div>
 
         <div style={S.toggles}>
@@ -474,6 +485,19 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
           side={THREE.BackSide}
         />
       </mesh>
+
+      {/* Dilation glow — red for strong dilation (close to Sun), green for weak */}
+      {(() => {
+        const dilationGlow = d.df < 1 ? Math.log10(1 / d.df) * 0.3 : 0;
+        // Strong dilation (closer to Sun / more massive) = red, weak = green
+        const glowColor = dilationGlow > 0.001 ? "#ef4444" : "#34d399";
+        return dilationGlow > 0 ? (
+          <mesh>
+            <sphereGeometry args={[sz * (1 + dilationGlow), 32, 32]} />
+            <meshBasicMaterial color={glowColor} transparent opacity={0.08} side={THREE.BackSide} depthWrite={false} />
+          </mesh>
+        ) : null;
+      })()}
 
       {/* Saturn rings with texture */}
       {d.rings && <SaturnRings size={sz} />}
@@ -682,38 +706,6 @@ function getRotationRate(name: string): number {
   }
 }
 
-// ─── Round 7 — Planet facts helpers ────────────────────────────────────────
-
-function getSurfaceTemp(name: string): string {
-  switch (name) {
-    case "Mercury": return "430\u00B0C (day) / -180\u00B0C (night)";
-    case "Venus": return "462\u00B0C";
-    case "Earth": return "15\u00B0C (avg)";
-    case "Mars": return "-65\u00B0C (avg)";
-    case "Jupiter": return "-110\u00B0C (cloud top)";
-    case "Saturn": return "-140\u00B0C (cloud top)";
-    case "Uranus": return "-195\u00B0C (cloud top)";
-    case "Neptune": return "-200\u00B0C (cloud top)";
-    case "Pluto": return "-230\u00B0C";
-    default: return "\u2014";
-  }
-}
-
-function getAtmosphere(name: string): string {
-  switch (name) {
-    case "Mercury": return "None (trace Na, K)";
-    case "Venus": return "CO\u2082 (dense, 90 atm)";
-    case "Earth": return "N\u2082/O\u2082 (1 atm)";
-    case "Mars": return "CO\u2082 (thin, 0.006 atm)";
-    case "Jupiter": return "H\u2082/He (massive)";
-    case "Saturn": return "H\u2082/He (massive)";
-    case "Uranus": return "H\u2082/He/CH\u2084";
-    case "Neptune": return "H\u2082/He/CH\u2084";
-    case "Pluto": return "N\u2082/CH\u2084 (trace)";
-    default: return "\u2014";
-  }
-}
-
 // ─── Round 6 — Kuiper Belt ────────────────────────────────────────────────
 
 function KuiperBelt() {
@@ -776,6 +768,8 @@ function OrbitTrail({ planet, timeSpeed, planetPositions }: {
     });
   });
 
+  const periodLabel = planet.period >= 1 ? `${planet.period.toFixed(1)} yr orbit` : `${(planet.period * 365.25).toFixed(0)} day orbit`;
+
   return (
     <group ref={trailRef}>
       {Array.from({ length: TRAIL_COUNT }, (_, i) => {
@@ -787,6 +781,12 @@ function OrbitTrail({ planet, timeSpeed, planetPositions }: {
           </mesh>
         );
       })}
+      {/* Orbital period label near trail */}
+      <Html position={[0, 0.3, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{ color: planet.color, fontSize: "9px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(2,2,8,0.7)", padding: "1px 4px", borderRadius: "2px", whiteSpace: "nowrap", opacity: 0.8 }}>
+          {periodLabel}
+        </div>
+      </Html>
     </group>
   );
 }
@@ -824,21 +824,36 @@ function HabitableZone() {
 
 function getMoonFact(name: string): string | null {
   switch (name) {
-    case "Moon": return "Only natural satellite of Earth. Tidally locked \u2014 same face always toward Earth.";
-    case "Phobos": return "Largest moon of Mars. Orbiting closer every century \u2014 will crash or break apart in ~50 million years.";
-    case "Deimos": return "Smallest moon of Mars. Only 12 km across. Slowly spiraling outward.";
-    case "Io": return "Most volcanically active body in the solar system. Tidal heating from Jupiter.";
-    case "Europa": return "Subsurface ocean beneath ice crust. Prime candidate for extraterrestrial life.";
-    case "Ganymede": return "Largest moon in the solar system \u2014 bigger than Mercury. Has its own magnetic field.";
-    case "Callisto": return "Most heavily cratered body in the solar system. Possible subsurface ocean.";
-    case "Titan": return "Only moon with a dense atmosphere. Methane lakes and rain. Larger than Mercury.";
-    case "Enceladus": return "Geysers of water ice erupt from south pole. Subsurface ocean confirmed.";
-    case "Rhea": return "Second-largest moon of Saturn. May have a faint ring system of its own.";
-    case "Miranda": return "Extreme geological features \u2014 huge canyons, cliffs up to 20 km high.";
-    case "Ariel": return "Brightest and youngest surface of Uranus\u2019s moons. Extensive fault canyons.";
-    case "Triton": return "Only large moon with retrograde orbit \u2014 likely a captured Kuiper belt object. Active nitrogen geysers.";
-    case "Charon": return "So large relative to Pluto they orbit a common center. Considered a binary system.";
+    case "Moon": return "Tidally locked. Earth's gravity dominates \u2014 clocks on Moon tick ~56 \u03BCs/day faster than Earth surface.";
+    case "Phobos": return "Largest moon of Mars. Orbiting closer every century \u2014 will crash or break apart in ~50 million years. Deep in Mars's gravity well.";
+    case "Deimos": return "Smallest moon of Mars. Only 12 km across. Slowly spiraling outward \u2014 weaker gravitational influence than Phobos.";
+    case "Io": return "Most volcanically active body in the solar system. Tidal heating from Jupiter's immense gravity creates extreme tidal dilation gradients.";
+    case "Europa": return "Deep in Jupiter's gravity well \u2014 measurable time dilation from tidal forces. Subsurface ocean beneath ice crust.";
+    case "Ganymede": return "Largest moon in the solar system \u2014 bigger than Mercury. Has its own magnetic field and gravity well.";
+    case "Callisto": return "Most heavily cratered body in the solar system. Farthest of Jupiter's Galilean moons \u2014 weakest Jovian tidal dilation.";
+    case "Titan": return "Saturn's gravity + Titan's own mass create compound dilation effect. Only moon with a dense atmosphere. Methane lakes and rain.";
+    case "Enceladus": return "Geysers of water ice erupt from south pole. Deep in Saturn's gravity well \u2014 tidal forces drive subsurface ocean heating.";
+    case "Rhea": return "Second-largest moon of Saturn. May have a faint ring system of its own. Moderate dilation from Saturn's gravity.";
+    case "Miranda": return "Extreme geological features \u2014 huge canyons, cliffs up to 20 km high. Close orbit means stronger Uranian tidal dilation.";
+    case "Ariel": return "Brightest and youngest surface of Uranus's moons. Extensive fault canyons shaped by tidal gravitational stresses.";
+    case "Triton": return "Only large moon with retrograde orbit \u2014 likely a captured Kuiper belt object. Active nitrogen geysers. Neptune's gravity dominates.";
+    case "Charon": return "So large relative to Pluto they orbit a common center. Considered a binary system \u2014 shared gravitational dilation field.";
     default: return null;
+  }
+}
+
+function getRelativityNote(name: string): string {
+  switch (name) {
+    case "Mercury": return "Closest to Sun \u2014 strongest solar gravity dilation among planets";
+    case "Venus": return "Deep in Sun's gravity well \u2014 second strongest planetary dilation";
+    case "Earth": return "Our reference frame \u2014 GPS must correct +38.6 \u03BCs/day for orbiting clocks";
+    case "Mars": return "Weaker solar gravity \u2014 clocks tick slightly faster than on Earth";
+    case "Jupiter": return "Most massive planet \u2014 deepest gravity well after Sun";
+    case "Saturn": return "Significant mass creates measurable gravity dilation at its surface";
+    case "Uranus": return "Distant from Sun \u2014 weak solar dilation, moderate self-gravity";
+    case "Neptune": return "Farthest giant planet \u2014 minimal solar dilation contribution";
+    case "Pluto": return "So far from Sun that solar gravity dilation is negligible";
+    default: return "";
   }
 }
 

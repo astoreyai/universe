@@ -13,7 +13,7 @@ type Scenario = "custom" | "gps" | "iss" | "proxima" | "galactic";
 
 const PRESETS: Record<string, { speed: number; years: number; label: string; description: string }> = {
   custom: { speed: 0.5, years: 10, label: "Custom", description: "User-defined speed and duration" },
-  gps: { speed: 3874 / C, years: 1, label: "GPS Satellite", description: "Orbiting at 3,874 m/s — clocks drift ~38 \u00B5s/day vs ground" },
+  gps: { speed: 3874 / C, years: 1, label: "GPS Satellite", description: "GPS requires +38.6 \u00B5s/day correction — without relativity, positioning drifts ~10 km/day" },
   iss: { speed: 7660 / C, years: 1, label: "ISS", description: "Low Earth orbit at 7,660 m/s — astronauts age slightly less" },
   proxima: { speed: 0.1, years: 84.6, label: "Proxima Centauri", description: "Round trip to nearest star at 10% c — 4.24 ly each way" },
   galactic: { speed: 0.99, years: 100, label: "Galactic Voyage", description: "Near-light-speed journey — extreme time dilation, traveler barely ages" },
@@ -149,6 +149,11 @@ export function TwinParadoxView() {
           />
         </div>
 
+        {/* Gamma display */}
+        <div style={{ textAlign: "center", fontSize: "20px", color: "#8b5cf6", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", padding: "4px 0" }}>
+          {"\u03B3"} = {results.gamma < 100 ? results.gamma.toFixed(4) : results.gamma.toExponential(3)}
+        </div>
+
         {/* Results */}
         <div style={styles.results}>
           <div style={{ ...styles.resultRow, color: "#8b5cf6" }}>
@@ -179,10 +184,9 @@ export function TwinParadoxView() {
 
         {/* Timeline bars */}
         <div style={styles.timelineSection}>
-          <div style={styles.timelineTitle}>Timeline Comparison</div>
+          <div style={styles.timelineTitle}>Who Ages More?</div>
           <TimeBar label="Earth Twin" years={results.earthAgingYears} max={results.coordTimeYears} color="#4a90d9" />
           <TimeBar label="Traveler" years={results.travelerAgingYears} max={results.coordTimeYears} color="#f59e0b" />
-          <TimeBar label="Coordinate" years={results.coordTimeYears} max={results.coordTimeYears} color="#64748b" />
         </div>
 
         {/* Formula */}
@@ -191,6 +195,11 @@ export function TwinParadoxView() {
           <div style={styles.formulaText}>
             {"\u03B3"} = 1/{"\u221A"}(1 - v{"\u00B2"}/c{"\u00B2"}) | {"\u0394"}{"\u03C4"}_trav = {"\u0394"}t / {"\u03B3"} | L' = L / {"\u03B3"}
           </div>
+        </div>
+
+        {/* Why This Matters */}
+        <div style={styles.infoCard}>
+          The twin paradox is real — verified by flying atomic clocks on aircraft (Hafele-Keating, 1971) and by GPS satellite corrections every day. Astronaut Scott Kelly aged 5 milliseconds less than his twin Mark during 340 days on the ISS.
         </div>
       </div>
     </div>
@@ -206,6 +215,14 @@ function TwinScene({ beta, gamma }: { beta: number; gamma: number }) {
       <TravelerShip beta={beta} gamma={gamma} />
       <SpacetimeGrid beta={beta} />
       <StreakingStars beta={beta} />
+      {/* Doppler legend */}
+      <Html position={[12, 4, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(1,1,8,0.9)", padding: "4px 8px", borderRadius: "4px", whiteSpace: "nowrap", border: "1px solid #1e293b" }}>
+          <span style={{ color: "#60a5fa" }}>{"\u2605"} Blue = approaching</span>
+          <span style={{ color: "#475569", margin: "0 4px" }}>|</span>
+          <span style={{ color: "#ef4444" }}>{"\u2605"} Red = receding</span>
+        </div>
+      </Html>
       {/* Round 5 — Reference cubes for Lorentz contraction comparison */}
       <ContractionCubes gamma={gamma} />
       {/* Round 7 — Speed of light indicator line */}
@@ -366,9 +383,16 @@ function SpacetimeGrid({ beta }: { beta: number }) {
   }, [positions]);
 
   return (
-    <lineSegments geometry={geometry}>
-      <lineBasicMaterial color="#3b82f6" transparent opacity={0.25} />
-    </lineSegments>
+    <group>
+      <lineSegments geometry={geometry}>
+        <lineBasicMaterial color="#3b82f6" transparent opacity={0.4} />
+      </lineSegments>
+      <Html position={[-12, -1.5, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{ color: "#3b82f6", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(1,1,8,0.85)", padding: "2px 6px", borderRadius: "3px", whiteSpace: "nowrap" }}>
+          Grid spacing contracted by 1/{"\u03B3"} = {contractFactor.toFixed(3)}
+        </div>
+      </Html>
+    </group>
   );
 }
 
@@ -791,5 +815,14 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "11px",
     color: "#a78bfa",
     fontStyle: "italic",
+  },
+  infoCard: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "10px",
+    fontSize: "10px",
+    color: "#94a3b8",
+    lineHeight: "1.5",
+    borderLeft: "3px solid #3b82f6",
   },
 };
