@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { initEngine, engine } from "./engine/wasm-bridge";
 import { DilationTable } from "./components/DilationTable";
 
@@ -42,6 +42,18 @@ export function App() {
       .catch((e) => setError(String(e)));
   }, []);
 
+  // Keyboard navigation: 1-6 switch tabs
+  const handleKeyboard = useCallback((e: KeyboardEvent) => {
+    const tabs: Tab[] = ["clocks", "dilation", "solar", "blackhole", "twins", "cosmos"];
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= 6) setActiveTab(tabs[num - 1]);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyboard);
+    return () => window.removeEventListener("keydown", handleKeyboard);
+  }, [handleKeyboard]);
+
   if (error) {
     return (
       <div style={styles.container}>
@@ -71,16 +83,17 @@ export function App() {
       </header>
 
       <nav style={styles.nav}>
-        {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => (
+        {(Object.keys(TAB_LABELS) as Tab[]).map((tab, i) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
+            title={`${TAB_LABELS[tab]} (press ${i + 1})`}
             style={{
               ...styles.tab,
               ...(activeTab === tab ? styles.tabActive : {}),
             }}
           >
-            {TAB_LABELS[tab]}
+            <span style={styles.tabKey}>{i + 1}</span> {TAB_LABELS[tab]}
           </button>
         ))}
       </nav>
@@ -149,6 +162,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#1e293b",
     color: "#e2e8f0",
     borderColor: "#3b82f6",
+  },
+  tabKey: {
+    fontSize: "9px",
+    opacity: 0.4,
+    marginRight: "2px",
   },
   main: {
     flex: 1,
