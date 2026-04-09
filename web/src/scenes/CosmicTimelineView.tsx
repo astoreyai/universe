@@ -597,34 +597,73 @@ function EpochSlicePlane({ epochAge, sliceZ }: { epochAge: number; sliceZ: numbe
 // ─── Particle field ────────────────────────────────────────────────────────
 
 function ParticleField() {
-  const { positions, colors } = useMemo(() => {
-    const N = 2500;
+  const { positions, colors, sizes } = useMemo(() => {
+    const N = 3000;
     const pos = new Float32Array(N * 3);
     const col = new Float32Array(N * 3);
+    const sz = new Float32Array(N);
 
-    for (let i = 0; i < N; i++) {
-      // Random cosmic age
-      const age = Math.random() * AGE_NOW;
+    // Simple hash for pseudo-noise clustering (filament/void structure)
+    const hash = (x: number, y: number) => {
+      const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+      return h - Math.floor(h);
+    };
+
+    let placed = 0;
+    let attempts = 0;
+    while (placed < N && attempts < N * 5) {
+      attempts++;
       const z = Math.max(Math.pow(10, Math.random() * 3.04) - 1, 0);
       const ageAtZ = engine.ageAtRedshiftGyr(z);
       const maxR = engine.comovingDistanceGly(z);
       const maxSceneR = comovingToSceneR(maxR);
 
-      // Random position within the light cone at this epoch
       const r = Math.random() * maxSceneR * 0.9;
       const theta = Math.random() * Math.PI * 2;
+      const x = r * Math.cos(theta);
+      const zPos = r * Math.sin(theta);
 
-      pos[i * 3] = r * Math.cos(theta);
-      pos[i * 3 + 1] = cosmicTimeToY(ageAtZ);
-      pos[i * 3 + 2] = r * Math.sin(theta);
+      // Clustering: use noise to create filament probability
+      // Higher noise value = filament (galaxy cluster), lower = void
+      const nx = Math.floor(x * 2) * 0.5;
+      const nz = Math.floor(zPos * 2) * 0.5;
+      const noiseVal = hash(nx + ageAtZ * 0.3, nz + ageAtZ * 0.7);
+      const clusterProb = noiseVal * noiseVal; // Bias toward clusters
 
-      // Color: blue-purple gradient based on age
+      // Reject particles in voids (low noise regions)
+      if (Math.random() > clusterProb * 1.5 + 0.1) continue;
+
+      const y = cosmicTimeToY(ageAtZ);
+
+      pos[placed * 3] = x;
+      pos[placed * 3 + 1] = y;
+      pos[placed * 3 + 2] = zPos;
+
+      // Color: early universe red-orange → late universe blue-white
       const t = ageAtZ / AGE_NOW;
-      col[i * 3] = 0.37 + t * 0.3; // R
-      col[i * 3 + 1] = 0.2 + t * 0.4; // G
-      col[i * 3 + 2] = 0.7 + t * 0.1; // B
+      const isCluster = noiseVal > 0.7;
+      if (isCluster) {
+        // Bright cluster nodes — white-yellow
+        col[placed * 3] = 0.9 + t * 0.1;
+        col[placed * 3 + 1] = 0.85 + t * 0.1;
+        col[placed * 3 + 2] = 0.6 + t * 0.3;
+        sz[placed] = 0.08 + noiseVal * 0.06;
+      } else {
+        // Filament particles — dimmer blue-purple
+        col[placed * 3] = 0.3 + t * 0.35;
+        col[placed * 3 + 1] = 0.25 + t * 0.35;
+        col[placed * 3 + 2] = 0.6 + t * 0.2;
+        sz[placed] = 0.03 + Math.random() * 0.03;
+      }
+
+      placed++;
     }
-    return { positions: pos, colors: col };
+
+    return {
+      positions: pos.slice(0, placed * 3),
+      colors: col.slice(0, placed * 3),
+      sizes: sz.slice(0, placed),
+    };
   }, []);
 
   return (
@@ -633,7 +672,7 @@ function ParticleField() {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         <bufferAttribute attach="attributes-color" args={[colors, 3]} />
       </bufferGeometry>
-      <pointsMaterial size={0.05} vertexColors transparent opacity={0.6} sizeAttenuation />
+      <pointsMaterial size={0.06} vertexColors transparent opacity={0.7} sizeAttenuation />
     </points>
   );
 }

@@ -108,6 +108,8 @@ export function SolarSystemView() {
             <OrbitRing key={`o-${p.name}`} r={p.au * AU} incl={p.incl} active={selected === p.name} />
           ))}
 
+          <AsteroidBelt />
+
           <DreiStars radius={200} depth={150} count={5000} factor={3} saturation={0.1} fade speed={0.5} />
 
           <EffectComposer>
@@ -258,7 +260,8 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onH
       gRef.current.position.y = Math.sin(a) * Math.sin(inclRad) * orbR * 0.4; // visible inclination offset
       gRef.current.position.z = Math.sin(a) * orbR;
     }
-    if (mRef.current) mRef.current.rotation.y += 0.008;
+    // Axial rotation — relative to Earth day (Jupiter ~2.4x faster, Venus ~243x slower)
+    if (mRef.current) mRef.current.rotation.y += 0.008 * getRotationRate(d.name);
   });
 
   return (
@@ -305,17 +308,8 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, onClick, onH
         />
       </mesh>
 
-      {/* Saturn rings */}
-      {d.rings && (
-        <group rotation={[Math.PI * 0.45, 0, 0]}>
-          {[0, 1, 2, 3].map((i) => (
-            <mesh key={i}>
-              <ringGeometry args={[sz * (1.3 + i * 0.22), sz * (1.5 + i * 0.22), 128]} />
-              <meshBasicMaterial color={i % 2 === 0 ? "#d4b87a" : "#c0a070"} transparent opacity={0.35 - i * 0.05} side={THREE.DoubleSide} />
-            </mesh>
-          ))}
-        </group>
-      )}
+      {/* Saturn rings with texture */}
+      {d.rings && <SaturnRings size={sz} />}
 
       {/* Moons */}
       {showMoons && moons.map(([mName, _, mOrbit, mRad, mColor]) => (
@@ -360,11 +354,13 @@ function MoonBody({ name, orbitR, radius, color, parentR }: { name: string; orbi
 
   useFrame(({ clock }) => {
     if (ref.current) {
-      const speed = 2 + Math.random() * 0.01; // slightly varied for visual interest
-      const t = clock.getElapsedTime() * speed / (orbitR / 100000);
+      // Kepler-proportional speed: closer moons orbit faster (period ∝ r^1.5)
+      const periodFactor = Math.pow(orbitR / 400000, 1.5); // normalize to Moon's orbit
+      const speed = 1.5 / Math.max(periodFactor, 0.01);
+      const t = clock.getElapsedTime() * speed;
       ref.current.position.x = Math.cos(t) * orbitSceneR;
       ref.current.position.z = Math.sin(t) * orbitSceneR;
-      ref.current.position.y = Math.sin(t * 0.7) * orbitSceneR * 0.1;
+      ref.current.position.y = Math.sin(t * 0.7) * orbitSceneR * 0.08;
     }
   });
 
@@ -408,7 +404,100 @@ function OrbitRing({ r, incl, active }: { r: number; incl: number; active: boole
   return <Line points={pts} color={active ? "#60a5fa" : "#1e293b"} lineWidth={active ? 1.2 : 0.4} transparent opacity={active ? 0.5 : 0.15} />;
 }
 
+// ─── Asteroid Belt ─────────────────────────────────────────────────────────
+
+function AsteroidBelt() {
+  const { positions, sizes } = useMemo(() => {
+    const N = 600;
+    const pos = new Float32Array(N * 3);
+    const sz = new Float32Array(N);
+    const innerAU = 2.1 * AU; // ~2.1 AU
+    const outerAU = 3.3 * AU; // ~3.3 AU
+    for (let i = 0; i < N; i++) {
+      const r = innerAU + Math.random() * (outerAU - innerAU);
+      const angle = Math.random() * Math.PI * 2;
+      const y = (Math.random() - 0.5) * 1.2; // slight vertical spread
+      pos[i * 3] = Math.cos(angle) * r;
+      pos[i * 3 + 1] = y;
+      pos[i * 3 + 2] = Math.sin(angle) * r;
+      sz[i] = 0.02 + Math.random() * 0.04;
+    }
+    return { positions: pos, sizes: sz };
+  }, []);
+
+  const ref = useRef<THREE.Points>(null);
+  useFrame(({ clock }) => {
+    if (ref.current) ref.current.rotation.y = clock.getElapsedTime() * 0.002;
+  });
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial color="#8a7d6b" size={0.06} transparent opacity={0.5} sizeAttenuation />
+    </points>
+  );
+}
+
+// ─── Saturn Rings with texture ─────────────────────────────────────────────
+
+function SaturnRings({ size }: { size: number }) {
+  const ringTex = useLoader(THREE.TextureLoader, `${BASE}textures/saturn_ring.png`);
+
+  // Custom ring geometry with proper UV mapping for the ring texture
+  const ringGeom = useMemo(() => {
+    const inner = size * 1.3;
+    const outer = size * 2.4;
+    const segments = 128;
+    const geom = new THREE.RingGeometry(inner, outer, segments, 1);
+    // Remap UVs so texture maps radially (inner edge → outer edge)
+    const uvs = geom.attributes.uv;
+    const pos = geom.attributes.position;
+    for (let i = 0; i < uvs.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const r = Math.sqrt(x * x + y * y);
+      const u = (r - inner) / (outer - inner);
+      uvs.setXY(i, u, 0.5);
+    }
+    return geom;
+  }, [size]);
+
+  return (
+    <group rotation={[Math.PI * 0.45, 0, 0]}>
+      <mesh geometry={ringGeom}>
+        <meshBasicMaterial
+          map={ringTex}
+          transparent
+          opacity={0.7}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Cassini Division gap — dark ring */}
+      <mesh>
+        <ringGeometry args={[size * 1.78, size * 1.85, 128]} />
+        <meshBasicMaterial color="#020208" transparent opacity={0.4} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
+
+// Rotation rate relative to Earth (Earth=1, Jupiter=2.4, Venus=0.004)
+function getRotationRate(name: string): number {
+  switch (name) {
+    case "Mercury": return 0.017;  // 58.6 day period
+    case "Venus": return 0.004;    // 243 day period (retrograde)
+    case "Earth": return 1.0;
+    case "Mars": return 0.97;      // 24.6 hr period
+    case "Jupiter": return 2.4;    // 9.9 hr period
+    case "Saturn": return 2.2;     // 10.7 hr period
+    default: return 1.0;
+  }
+}
 
 function getTimeZoneCount(name: string): number {
   switch (name) {
