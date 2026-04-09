@@ -45,9 +45,9 @@ const PLANET_SCALE = 0.0006;
 const SUN_R = 0.5;
 const MIN_R = 0.25;
 const TIME_SPEED = 0.5;
-const MOON_ORBIT_SCALE = 0.000003; // Scale down moon orbital radii to scene units
-const MIN_MOON_R = 0.03;
-const MIN_MOON_ORBIT = 0.25;
+const MOON_ORBIT_SCALE = 0.000008; // Scale down moon orbital radii to scene units
+const MIN_MOON_R = 0.06;
+const MIN_MOON_ORBIT = 0.5;
 
 interface PData {
   name: string; au: number; period: number; rKm: number;
@@ -96,6 +96,7 @@ const gridFragmentShader = `
 
 export function SolarSystemView() {
   const [selected, setSelected] = useState("Earth");
+  const [selectedMoon, setSelectedMoon] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [showMoons, setShowMoons] = useState(true);
@@ -146,7 +147,7 @@ export function SolarSystemView() {
           <Sun selected={selected === "Sun"} onClick={() => { setSelected("Sun"); setFocused(true); }} onHover={setHovered} />
 
           {planets.map((p) => (
-            <Planet key={p.name} d={p} selected={selected === p.name} hovered={hovered === p.name} refDf={refDf} showGrid={showGrid} showMoons={showMoons} timeSpeed={paused ? 0 : timeSpeed} planetPositions={planetPositions} onClick={() => { setSelected(p.name); setFocused(true); }} onHover={setHovered} />
+            <Planet key={p.name} d={p} selected={selected === p.name} hovered={hovered === p.name} refDf={refDf} showGrid={showGrid} showMoons={showMoons} timeSpeed={paused ? 0 : timeSpeed} planetPositions={planetPositions} onClick={() => { setSelected(p.name); setSelectedMoon(null); setFocused(true); }} onHover={setHovered} onSelectMoon={setSelectedMoon} />
           ))}
 
           {showOrbits && planets.map((p) => (
@@ -231,6 +232,29 @@ export function SolarSystemView() {
             </div>
           ) : null}
         </div>
+
+        {/* Selected moon info */}
+        {selectedMoon && (() => {
+          const m = MOONS.find(([n]) => n === selectedMoon);
+          if (!m) return null;
+          const [mName, mParent, mOrbit, mRad, _, mIncl] = m;
+          return (
+            <div style={{ ...S.info, borderLeft: "3px solid #a78bfa" }}>
+              <div style={{ ...S.infoName, fontSize: "14px" }}>{mName}</div>
+              <div style={{ fontSize: "10px", color: "#94a3b8", marginBottom: "4px" }}>Moon of {mParent}</div>
+              <div style={S.infoD}>
+                <Row l="Diameter" v={`${(mRad * 2).toLocaleString()} km`} />
+                <Row l="Orbit radius" v={`${mOrbit.toLocaleString()} km`} />
+                <Row l="Inclination" v={`${mIncl.toFixed(2)}\u00B0`} />
+                <Row l="Orbit period" v={`${(Math.pow(mOrbit / 384400, 1.5) * 27.3).toFixed(1)} days`} />
+                {getMoonFact(mName) && <div style={{ fontSize: "10px", color: "#64748b", marginTop: "4px", fontStyle: "italic" }}>{getMoonFact(mName)}</div>}
+              </div>
+              <button onClick={() => setSelectedMoon(null)} style={{ ...S.btn, marginTop: "6px", width: "100%", textAlign: "center" as const }}>
+                Deselect moon
+              </button>
+            </div>
+          );
+        })()}
 
         <div style={S.comp}>
           <div style={S.compHdr}>Differential Aging vs {selected}</div>
@@ -330,10 +354,10 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
 
 // ─── Planet with texture + grid + moons ────────────────────────────────────
 
-function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, planetPositions, onClick, onHover }: {
+function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, planetPositions, onClick, onHover, onSelectMoon }: {
   d: PData; selected: boolean; hovered: boolean; refDf: number; showGrid: boolean; showMoons: boolean;
   timeSpeed: number; planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
-  onClick: () => void; onHover: (n: string | null) => void;
+  onClick: () => void; onHover: (n: string | null) => void; onSelectMoon: (name: string | null) => void;
 }) {
   const gRef = useRef<THREE.Group>(null);
   const mRef = useRef<THREE.Mesh>(null);
@@ -370,7 +394,8 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
       if (!planetPositions.current[d.name]) planetPositions.current[d.name] = new THREE.Vector3();
       planetPositions.current[d.name].copy(gRef.current.position);
     }
-    if (mRef.current) mRef.current.rotation.y += 0.008 * getRotationRate(d.name);
+    // Realistic relative rotation: Earth ~1 rotation per 10s visual, scaled by planet's real rate
+    if (mRef.current) mRef.current.rotation.y += 0.001 * getRotationRate(d.name);
   });
 
   return (
@@ -416,7 +441,7 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
 
       {/* Moons */}
       {showMoons && moons.map(([mName, _, mOrbit, mRad, mColor, mIncl]) => (
-        <MoonBody key={mName} name={mName} orbitR={mOrbit} radius={mRad} color={mColor} parentR={sz} inclination={mIncl} />
+        <MoonBody key={mName} name={mName} orbitR={mOrbit} radius={mRad} color={mColor} parentR={sz} inclination={mIncl} onClick={() => onSelectMoon(mName)} />
       ))}
 
       {/* Selection ring */}
@@ -447,11 +472,11 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
 
 // ─── Moon ───────────────────────────────────────────────────────────────────
 
-function MoonBody({ name, orbitR, radius, color, parentR, inclination }: {
-  name: string; orbitR: number; radius: number; color: string; parentR: number; inclination: number;
+function MoonBody({ name, orbitR, radius, color, parentR, inclination, onClick }: {
+  name: string; orbitR: number; radius: number; color: string; parentR: number; inclination: number; onClick: () => void;
 }) {
   const ref = useRef<THREE.Group>(null);
-  const moonR = Math.max(Math.log10(radius + 1) * 0.04, MIN_MOON_R);
+  const moonR = Math.max(Math.log10(radius + 1) * 0.07, MIN_MOON_R);
   const orbitSceneR = Math.max(orbitR * MOON_ORBIT_SCALE + parentR * 1.3, parentR + MIN_MOON_ORBIT);
   // Amplify inclination for visibility (real values are tiny — Moon's 5.15° is the largest)
   const inclRad = (inclination * Math.PI) / 180 * 3; // 3x amplification
@@ -479,9 +504,9 @@ function MoonBody({ name, orbitR, radius, color, parentR, inclination }: {
           <meshBasicMaterial color="#334155" transparent opacity={0.15} side={THREE.DoubleSide} />
         </mesh>
       </group>
-      {/* Moon body */}
+      {/* Moon body — clickable */}
       <group ref={ref}>
-        <mesh>
+        <mesh onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onClick(); }}>
           <sphereGeometry args={[moonR, 16, 16]} />
           {name === "Moon" ? (
             <meshBasicMaterial map={moonTex} />
@@ -489,8 +514,8 @@ function MoonBody({ name, orbitR, radius, color, parentR, inclination }: {
             <meshBasicMaterial color={color} />
           )}
         </mesh>
-        <Html position={[0, moonR + 0.08, 0]} center style={{ pointerEvents: "none" }}>
-          <div style={{ color: "#94a3b8", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{name}</div>
+        <Html position={[0, moonR + 0.12, 0]} center style={{ pointerEvents: "none" }}>
+          <div style={{ color: "#e2e8f0", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap", background: "rgba(1,1,8,0.7)", padding: "1px 4px", borderRadius: "2px" }}>{name}</div>
         </Html>
       </group>
     </group>
@@ -752,6 +777,26 @@ function HabitableZone() {
       </Html>
     </group>
   );
+}
+
+function getMoonFact(name: string): string | null {
+  switch (name) {
+    case "Moon": return "Only natural satellite of Earth. Tidally locked \u2014 same face always toward Earth.";
+    case "Phobos": return "Largest moon of Mars. Orbiting closer every century \u2014 will crash or break apart in ~50 million years.";
+    case "Deimos": return "Smallest moon of Mars. Only 12 km across. Slowly spiraling outward.";
+    case "Io": return "Most volcanically active body in the solar system. Tidal heating from Jupiter.";
+    case "Europa": return "Subsurface ocean beneath ice crust. Prime candidate for extraterrestrial life.";
+    case "Ganymede": return "Largest moon in the solar system \u2014 bigger than Mercury. Has its own magnetic field.";
+    case "Callisto": return "Most heavily cratered body in the solar system. Possible subsurface ocean.";
+    case "Titan": return "Only moon with a dense atmosphere. Methane lakes and rain. Larger than Mercury.";
+    case "Enceladus": return "Geysers of water ice erupt from south pole. Subsurface ocean confirmed.";
+    case "Rhea": return "Second-largest moon of Saturn. May have a faint ring system of its own.";
+    case "Miranda": return "Extreme geological features \u2014 huge canyons, cliffs up to 20 km high.";
+    case "Ariel": return "Brightest and youngest surface of Uranus\u2019s moons. Extensive fault canyons.";
+    case "Triton": return "Only large moon with retrograde orbit \u2014 likely a captured Kuiper belt object. Active nitrogen geysers.";
+    case "Charon": return "So large relative to Pluto they orbit a common center. Considered a binary system.";
+    default: return null;
+  }
 }
 
 function getTimeZoneCount(name: string): number {
