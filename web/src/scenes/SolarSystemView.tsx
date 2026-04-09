@@ -15,6 +15,9 @@ const PLANETS: [string, number, number, number, string, boolean, number, string]
   ["Mars", 1.524, 1.881, 3390, "#c1440e", false, 1.85, "mars.jpg"],
   ["Jupiter", 5.203, 11.86, 69911, "#c88b3a", false, 1.31, "jupiter.jpg"],
   ["Saturn", 9.537, 29.46, 58232, "#d4b87a", true, 2.49, "saturn.jpg"],
+  ["Uranus", 19.19, 84.01, 25362, "#73d4e0", false, 0.77, "venus.jpg"],
+  ["Neptune", 30.07, 164.8, 24622, "#3b5fc0", false, 1.77, "jupiter.jpg"],
+  ["Pluto", 39.48, 247.9, 1188, "#c8b898", false, 17.16, "mercury.jpg"],
 ];
 
 // Major moons: [name, parentPlanet, orbitalRadius_km, radius_km, color, inclination_deg]
@@ -30,6 +33,10 @@ const MOONS: [string, string, number, number, string, number][] = [
   ["Titan", "Saturn", 1221870, 2575, "#d4a030", 0.35],
   ["Enceladus", "Saturn", 238020, 252, "#f0f0f0", 0.009],
   ["Rhea", "Saturn", 527040, 764, "#c0b8a8", 0.35],
+  ["Miranda", "Uranus", 129900, 236, "#b0a898", 4.34],
+  ["Ariel", "Uranus", 190900, 579, "#c8c0b8", 0.04],
+  ["Triton", "Neptune", 354759, 1353, "#c0d0d8", 156.87],
+  ["Charon", "Pluto", 19591, 606, "#a89888", 0.0],
 ];
 
 const BASE = import.meta.env.BASE_URL;
@@ -93,7 +100,9 @@ export function SolarSystemView() {
   const [showGrid, setShowGrid] = useState(true);
   const [showMoons, setShowMoons] = useState(true);
   const [showOrbits, setShowOrbits] = useState(true);
-  const [focused, setFocused] = useState(false); // camera focused on planet
+  const [focused, setFocused] = useState(false);
+  const [timeSpeed, setTimeSpeed] = useState(0.5);
+  const [paused, setPaused] = useState(false);
   const planetPositions = useRef<Record<string, THREE.Vector3>>({});
 
   const planets: PData[] = useMemo(() => {
@@ -120,7 +129,7 @@ export function SolarSystemView() {
           <Sun selected={selected === "Sun"} onClick={() => { setSelected("Sun"); setFocused(true); }} onHover={setHovered} />
 
           {planets.map((p) => (
-            <Planet key={p.name} d={p} selected={selected === p.name} hovered={hovered === p.name} refDf={refDf} showGrid={showGrid} showMoons={showMoons} planetPositions={planetPositions} onClick={() => { setSelected(p.name); setFocused(true); }} onHover={setHovered} />
+            <Planet key={p.name} d={p} selected={selected === p.name} hovered={hovered === p.name} refDf={refDf} showGrid={showGrid} showMoons={showMoons} timeSpeed={paused ? 0 : timeSpeed} planetPositions={planetPositions} onClick={() => { setSelected(p.name); setFocused(true); }} onHover={setHovered} />
           ))}
 
           {showOrbits && planets.map((p) => (
@@ -166,7 +175,9 @@ export function SolarSystemView() {
             <div style={S.infoD}>
               <Row l="d\u03C4/dt" v={`1 - ${(1 - selP.df).toExponential(3)}`} />
               <Row l="Lost/year" v={fmt(selP.lost)} />
-              <Row l="Orbit" v={`${selP.au.toFixed(3)} AU | ${selP.period.toFixed(2)} yr`} />
+              <Row l="Diameter" v={`${(selP.rKm * 2).toLocaleString()} km`} />
+              <Row l="Distance" v={`${selP.au.toFixed(3)} AU (${(selP.au * 149.6).toFixed(0)}M km)`} />
+              <Row l="Orbit" v={`${selP.period.toFixed(2)} yr`} />
               <Row l="Inclination" v={`${selP.incl.toFixed(2)}\u00B0`} />
               <Row l="Time zones" v={getTimeZoneCount(selP.name).toString()} />
               {MOONS.filter((m) => m[1] === selP.name).length > 0 && (
@@ -180,15 +191,25 @@ export function SolarSystemView() {
           <div style={S.compHdr}>Differential Aging vs {selected}</div>
           {planets.filter((p) => p.name !== selected).map((p) => {
             const d = engine.compareBodies(selected, p.name);
+            const valid = !isNaN(d);
             return (
               <div key={p.name} style={S.compRow}>
                 <span style={{ color: p.color }}>{"\u25CF"} {p.name}</span>
-                <span style={{ color: d > 0 ? "#34d399" : "#f87171", fontVariantNumeric: "tabular-nums" }}>
-                  {d > 0 ? "+" : ""}{d.toFixed(2)} {"\u03BCs"}/day
+                <span style={{ color: valid ? (d > 0 ? "#34d399" : "#f87171") : "#475569", fontVariantNumeric: "tabular-nums" }}>
+                  {valid ? `${d > 0 ? "+" : ""}${d.toFixed(2)} \xB5s/day` : "\u2014"}
                 </span>
               </div>
             );
           })}
+        </div>
+
+        <div style={S.speedControl}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "10px", color: "#64748b" }}>Speed: {timeSpeed.toFixed(1)}x</span>
+            <button onClick={() => setPaused(!paused)} style={S.pauseBtn}>{paused ? "\u25B6" : "\u23F8"}</button>
+          </div>
+          <input type="range" min="0.1" max="5" step="0.1" value={timeSpeed}
+            onChange={(e) => setTimeSpeed(parseFloat(e.target.value))} style={{ width: "100%", accentColor: "#3b82f6" }} />
         </div>
 
         <div style={S.toggles}>
@@ -295,9 +316,9 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
 
 // ─── Planet with texture + grid + moons ────────────────────────────────────
 
-function Planet({ d, selected, hovered, refDf, showGrid, showMoons, planetPositions, onClick, onHover }: {
+function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, planetPositions, onClick, onHover }: {
   d: PData; selected: boolean; hovered: boolean; refDf: number; showGrid: boolean; showMoons: boolean;
-  planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
+  timeSpeed: number; planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
   onClick: () => void; onHover: (n: string | null) => void;
 }) {
   const gRef = useRef<THREE.Group>(null);
@@ -327,7 +348,7 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, planetPositi
 
   useFrame(({ clock }) => {
     if (gRef.current) {
-      const a = (clock.getElapsedTime() * TIME_SPEED) / d.period + d.au * 1.5;
+      const a = (clock.getElapsedTime() * timeSpeed) / d.period + d.au * 1.5;
       gRef.current.position.x = Math.cos(a) * orbR;
       gRef.current.position.y = Math.sin(a) * Math.sin(inclRad) * orbR * 0.4;
       gRef.current.position.z = Math.sin(a) * orbR;
@@ -566,24 +587,30 @@ function SaturnRings({ size }: { size: number }) {
 // Rotation rate relative to Earth (Earth=1, Jupiter=2.4, Venus=0.004)
 function getRotationRate(name: string): number {
   switch (name) {
-    case "Mercury": return 0.017;  // 58.6 day period
-    case "Venus": return 0.004;    // 243 day period (retrograde)
-    case "Earth": return 1.0;
-    case "Mars": return 0.97;      // 24.6 hr period
-    case "Jupiter": return 2.4;    // 9.9 hr period
-    case "Saturn": return 2.2;     // 10.7 hr period
+    case "Mercury": return 0.017;   // 58.6 day period
+    case "Venus": return 0.004;     // 243 day period (retrograde)
+    case "Earth": return 1.0;       // 24 hr
+    case "Mars": return 0.97;       // 24.6 hr
+    case "Jupiter": return 2.4;     // 9.9 hr
+    case "Saturn": return 2.2;      // 10.7 hr
+    case "Uranus": return 1.4;      // 17.2 hr
+    case "Neptune": return 1.5;     // 16.1 hr
+    case "Pluto": return 0.15;      // 6.4 day period
     default: return 1.0;
   }
 }
 
 function getTimeZoneCount(name: string): number {
   switch (name) {
+    case "Mercury": return 6;
+    case "Venus": return 1;         // barely rotates
     case "Earth": return 24;
     case "Mars": return 24;
     case "Jupiter": return 12;
     case "Saturn": return 12;
-    case "Venus": return 1;
-    case "Mercury": return 6;
+    case "Uranus": return 12;
+    case "Neptune": return 12;
+    case "Pluto": return 4;
     default: return 12;
   }
 }
@@ -622,6 +649,8 @@ const S: Record<string, React.CSSProperties> = {
   compHdr: { fontSize: "11px", color: "#64748b", letterSpacing: "0.5px", marginBottom: "2px" },
   compRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0", borderBottom: "1px solid #0a0f18" },
   note: { fontSize: "9px", color: "#475569", fontStyle: "italic", padding: "4px 0" },
+  speedControl: { background: "#0a0f18", borderRadius: "6px", padding: "8px", display: "flex", flexDirection: "column", gap: "4px" },
+  pauseBtn: { padding: "2px 8px", border: "1px solid #1e293b", borderRadius: "4px", background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: "12px", fontFamily: "inherit" },
   backBtn: {
     padding: "6px 12px", border: "1px solid #3b82f6", borderRadius: "6px",
     background: "#1e293b", color: "#60a5fa", cursor: "pointer",

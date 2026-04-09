@@ -139,6 +139,9 @@ pub fn compare_bodies(body_a: &str, body_b: &str) -> f64 {
             "Mercury" => Some(body::mercury()),
             "Venus" => Some(body::venus()),
             "Saturn" => Some(body::saturn()),
+            "Uranus" => Some(body::uranus()),
+            "Neptune" => Some(body::neptune()),
+            "Pluto" => Some(body::pluto()),
             _ => None,
         }
     };
