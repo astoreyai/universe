@@ -240,15 +240,16 @@ export function BlackHoleView() {
 
         {/* Why This Matters */}
         <div style={styles.infoCard}>
-          Black holes test general relativity at its extremes. Near the event horizon, time dilation approaches infinity — a clock would appear to freeze from a distant observer's perspective. Accretion disks around black holes are the brightest objects in the universe, powering quasars visible across billions of light-years.
+          The closer to the event horizon, the slower time moves. At dilation = 0.1 (extreme zone), 1 second for you = 10 seconds for a distant observer. Accretion disks shine because matter spirals inward through this extreme dilation, converting gravitational energy to radiation — powering quasars visible across billions of light-years.
         </div>
 
         <div style={styles.profileSection}>
           <div style={styles.profileTitle}>Dilation Profile</div>
           <svg viewBox="0 0 260 120" style={styles.svg}>
             {/* Grid — log scale: map dilation [0..1] with log spacing */}
-            {[0.01, 0.1, 0.25, 0.5, 1.0].map((v) => {
+            {([0.01, 0.1, 0.25, 0.5, 1.0] as const).map((v) => {
               const yPos = 110 - (Math.log10(v + 0.001) + 3) / (Math.log10(1.001) + 3) * 100;
+              const word = v === 0.01 ? "frozen" : v === 0.1 ? "extreme" : v === 0.25 ? "severe" : v === 0.5 ? "half" : "normal";
               return (
                 <g key={v}>
                   <line
@@ -263,10 +264,10 @@ export function BlackHoleView() {
                     x={2}
                     y={yPos + 3}
                     fill="#94a3b8"
-                    fontSize={10}
+                    fontSize={9}
                     fontFamily="monospace"
                   >
-                    {v < 0.1 ? v.toFixed(2) : v.toFixed(1)}
+                    {v < 0.1 ? v.toFixed(2) : v.toFixed(1)} {word}
                   </text>
                 </g>
               );

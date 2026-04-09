@@ -220,6 +220,16 @@ export function DilationTable() {
             {"\u25CF"} Larger = stronger gravitational dilation | Click body to set reference frame
           </text>
 
+          {/* Color legend */}
+          <text x={300} y={490} textAnchor="middle" fill="#94a3b8" fontSize={9}>
+            {"\u25CF"}{" "}
+            <tspan fill="#34d399">Green = ticks faster than reference</tspan>
+            {" | \u25CF "}
+            <tspan fill="#f87171">Red = ticks slower</tspan>
+            {" | \u25CF "}
+            <tspan fill="#94a3b8">Gray = reference frame</tspan>
+          </text>
+
           {/* Visual scale legend — reference circles */}
           <g>
             <text x={42} y={402} textAnchor="middle" fill="#64748b" fontSize={9} fontWeight={600}>SCALE</text>
@@ -336,14 +346,6 @@ export function DilationTable() {
                 {isHovered && BODY_DESCRIPTIONS[b.name] && (
                   <div style={styles.bodyDesc}>{BODY_DESCRIPTIONS[b.name]}</div>
                 )}
-                {/* Visual severity bar — unified with chart logSeverity */}
-                <div style={styles.barBg}>
-                  <div style={{
-                    ...styles.barFill,
-                    width: `${Math.min(logSeverity * 100, 100)}%`,
-                    background: color,
-                  }} />
-                </div>
               </div>
             );
           })}

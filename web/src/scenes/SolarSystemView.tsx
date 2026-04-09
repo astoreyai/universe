@@ -225,6 +225,13 @@ export function SolarSystemView() {
           <div style={S.panelHdr}>{detailView} {detailView === "Pluto" ? "(Dwarf Planet)" : ""}</div>
         )}
 
+        {/* Prompt when detail view is set but nothing selected yet */}
+        {detailView !== null && !selP && selected !== "Sun" && (
+          <div style={{ fontSize: "11px", color: "#94a3b8", fontStyle: "italic", padding: "6px 8px" }}>
+            Click a planet to see gravity and time dilation details.
+          </div>
+        )}
+
         <div style={S.info}>
           <div style={S.infoName}>{detailView || selected}</div>
           {selected === "Sun" ? (
@@ -472,10 +479,17 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
 
       {/* Time zone grid overlay */}
       {showGrid && (
-        <mesh>
-          <sphereGeometry args={[sz * 1.003, 64, 64]} />
-          <primitive object={gridMat} attach="material" />
-        </mesh>
+        <>
+          <mesh>
+            <sphereGeometry args={[sz * 1.003, 64, 64]} />
+            <primitive object={gridMat} attach="material" />
+          </mesh>
+          <Html position={[0, -3, 0]} center style={{ pointerEvents: "none" }}>
+            <div style={{ color: "#94a3b8", fontSize: "9px", fontStyle: "italic", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
+              Grid shows planetary rotation: longitude lines = time zones, latitude lines = geographic reference
+            </div>
+          </Html>
+        </>
       )}
 
       {/* Atmosphere */}

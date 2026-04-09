@@ -152,7 +152,7 @@ export function TwinParadoxView() {
         {/* Results */}
         <div style={styles.results}>
           <div style={{ ...styles.resultRow, color: "#8b5cf6" }}>
-            <span>Lorentz {"\u03B3"}</span>
+            <span>Lorentz {"\u03B3"} <span style={{ color: "#94a3b8", fontSize: "9px", fontStyle: "italic", fontWeight: 400 }}>(time dilation factor)</span></span>
             <span>{results.gamma < 100 ? results.gamma.toFixed(4) : results.gamma.toExponential(3)}</span>
           </div>
           <div style={styles.resultRow}>
@@ -176,6 +176,15 @@ export function TwinParadoxView() {
             <span>{results.contractedLy.toFixed(2)} ly</span>
           </div>
         </div>
+
+        {/* Relativistic speeds callout */}
+        {results.gamma > 2.0 && (
+          <div style={{ background: "#0f172a", borderLeft: "3px solid #a78bfa", padding: "8px", borderRadius: "6px", marginTop: "2px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#a78bfa" }}>
+              {"\u26A1"} Relativistic Speeds! At {results.speedKmS.toFixed(1)} km/s, time dilation is {results.gamma < 100 ? results.gamma.toFixed(2) : results.gamma.toExponential(2)}{"\u00D7"} — the traveler ages {results.differenceYears.toFixed(2)} fewer years.
+            </div>
+          </div>
+        )}
 
         {/* Timeline bars */}
         <div style={styles.timelineSection}>
