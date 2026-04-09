@@ -155,7 +155,16 @@ export function SolarSystemView() {
             <OrbitRing key={`o-${p.name}`} r={p.au * AU} incl={p.incl} active={selected === p.name} />
           ))}
 
+          {/* Round 8 — Orbit trail for selected planet */}
+          {planets.map((p) => (
+            selected === p.name && <OrbitTrail key={`trail-${p.name}`} planet={p} timeSpeed={paused ? 0 : timeSpeed} planetPositions={planetPositions} />
+          ))}
+
           <AsteroidBelt />
+          <KuiperBelt />
+
+          {/* Round 10 — Habitable zone indicator */}
+          {showOrbits && <HabitableZone />}
 
           {/* Scale indicator at 1 AU */}
           <Html position={[AU, -1.5, 0]} center style={{ pointerEvents: "none" }}>
@@ -209,6 +218,18 @@ export function SolarSystemView() {
               {MOONS.filter((m) => m[1] === selP.name).length > 0 && (
                 <Row l="Moons" v={MOONS.filter((m) => m[1] === selP.name).map((m) => m[0]).join(", ")} />
               )}
+              {/* Round 7 — Surface temperature & atmosphere */}
+              <Row l="Surface temp" v={getSurfaceTemp(selP.name)} />
+              <Row l="Atmosphere" v={getAtmosphere(selP.name)} />
+              {/* Round 9 — Dwarf planet label for Pluto */}
+              {selP.name === "Pluto" && (
+                <>
+                  <Row l="Classification" v="Dwarf planet" />
+                  <div style={{ fontSize: "9px", color: "#64748b", marginTop: "4px", lineHeight: "1.4" }}>
+                    Reclassified by the IAU in 2006 due to not clearing its orbital neighborhood (Kuiper belt).
+                  </div>
+                </>
+              )}
             </div>
           ) : null}
         </div>
@@ -260,6 +281,8 @@ export function SolarSystemView() {
 
         <div style={S.note}>
           Asteroid belt: 2.1{"\u2013"}3.3 AU between Mars and Jupiter
+          <br />
+          Kuiper belt: 30{"\u2013"}50 AU beyond Neptune
         </div>
       </div>
     </div>
@@ -629,6 +652,146 @@ function getRotationRate(name: string): number {
     case "Pluto": return 0.15;      // 6.4 day period
     default: return 1.0;
   }
+}
+
+// ─── Round 7 — Planet facts helpers ────────────────────────────────────────
+
+function getSurfaceTemp(name: string): string {
+  switch (name) {
+    case "Mercury": return "430\u00B0C (day) / -180\u00B0C (night)";
+    case "Venus": return "462\u00B0C";
+    case "Earth": return "15\u00B0C (avg)";
+    case "Mars": return "-65\u00B0C (avg)";
+    case "Jupiter": return "-110\u00B0C (cloud top)";
+    case "Saturn": return "-140\u00B0C (cloud top)";
+    case "Uranus": return "-195\u00B0C (cloud top)";
+    case "Neptune": return "-200\u00B0C (cloud top)";
+    case "Pluto": return "-230\u00B0C";
+    default: return "\u2014";
+  }
+}
+
+function getAtmosphere(name: string): string {
+  switch (name) {
+    case "Mercury": return "None (trace Na, K)";
+    case "Venus": return "CO\u2082 (dense, 90 atm)";
+    case "Earth": return "N\u2082/O\u2082 (1 atm)";
+    case "Mars": return "CO\u2082 (thin, 0.006 atm)";
+    case "Jupiter": return "H\u2082/He (massive)";
+    case "Saturn": return "H\u2082/He (massive)";
+    case "Uranus": return "H\u2082/He/CH\u2084";
+    case "Neptune": return "H\u2082/He/CH\u2084";
+    case "Pluto": return "N\u2082/CH\u2084 (trace)";
+    default: return "\u2014";
+  }
+}
+
+// ─── Round 6 — Kuiper Belt ────────────────────────────────────────────────
+
+function KuiperBelt() {
+  const { positions, sizes } = useMemo(() => {
+    const N = 300;
+    const pos = new Float32Array(N * 3);
+    const sz = new Float32Array(N);
+    const innerAU = 30 * AU;
+    const outerAU = 50 * AU;
+    for (let i = 0; i < N; i++) {
+      const r = innerAU + Math.random() * (outerAU - innerAU);
+      const angle = Math.random() * Math.PI * 2;
+      const y = (Math.random() - 0.5) * 2.5;
+      pos[i * 3] = Math.cos(angle) * r;
+      pos[i * 3 + 1] = y;
+      pos[i * 3 + 2] = Math.sin(angle) * r;
+      sz[i] = 0.03 + Math.random() * 0.06;
+    }
+    return { positions: pos, sizes: sz };
+  }, []);
+
+  const ref = useRef<THREE.Points>(null);
+  useFrame(({ clock }) => {
+    if (ref.current) ref.current.rotation.y = clock.getElapsedTime() * 0.0005;
+  });
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial color="#4a6080" size={0.08} transparent opacity={0.45} sizeAttenuation />
+    </points>
+  );
+}
+
+// ─── Round 8 — Orbit trail ────────────────────────────────────────────────
+
+function OrbitTrail({ planet, timeSpeed, planetPositions }: {
+  planet: PData;
+  timeSpeed: number;
+  planetPositions: React.MutableRefObject<Record<string, THREE.Vector3>>;
+}) {
+  const trailRef = useRef<THREE.Group>(null);
+  const TRAIL_COUNT = 20;
+  const TRAIL_ARC = (30 * Math.PI) / 180; // 30 degrees
+
+  const orbR = planet.au * AU;
+  const inclRad = (planet.incl * Math.PI) / 180;
+
+  useFrame(({ clock }) => {
+    if (!trailRef.current) return;
+    const currentAngle = (clock.getElapsedTime() * timeSpeed) / planet.period + planet.au * 1.5;
+    trailRef.current.children.forEach((child, i) => {
+      const frac = (i + 1) / TRAIL_COUNT;
+      const angle = currentAngle - frac * TRAIL_ARC;
+      (child as THREE.Mesh).position.x = Math.cos(angle) * orbR;
+      (child as THREE.Mesh).position.y = Math.sin(angle) * Math.sin(inclRad) * orbR * 0.4;
+      (child as THREE.Mesh).position.z = Math.sin(angle) * orbR;
+    });
+  });
+
+  return (
+    <group ref={trailRef}>
+      {Array.from({ length: TRAIL_COUNT }, (_, i) => {
+        const opacity = 0.6 * (1 - (i + 1) / TRAIL_COUNT);
+        return (
+          <mesh key={i}>
+            <sphereGeometry args={[0.04, 6, 6]} />
+            <meshBasicMaterial color={planet.color} transparent opacity={opacity} depthWrite={false} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+// ─── Round 10 — Habitable Zone ────────────────────────────────────────────
+
+function HabitableZone() {
+  const innerR = 0.95 * AU;
+  const outerR = 1.37 * AU;
+
+  return (
+    <group>
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <ringGeometry args={[innerR, outerR, 128]} />
+        <meshBasicMaterial color="#22c55e" transparent opacity={0.06} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+      {/* Habitable zone label */}
+      <Html position={[outerR + 0.5, 0, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{
+          color: "#22c55e",
+          fontSize: "9px",
+          fontFamily: "'JetBrains Mono', monospace",
+          background: "rgba(2,2,8,0.85)",
+          padding: "2px 6px",
+          borderRadius: "3px",
+          whiteSpace: "nowrap",
+          border: "1px solid #22c55e30",
+        }}>
+          Habitable Zone
+        </div>
+      </Html>
+    </group>
+  );
 }
 
 function getTimeZoneCount(name: string): number {

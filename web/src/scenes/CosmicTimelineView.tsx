@@ -231,6 +231,32 @@ export function CosmicTimelineView() {
           <div style={{ ...styles.resultRow, color: "#94a3b8", fontSize: "10px", marginTop: "4px", transition: "color 0.3s ease" }}>
             {describeRedshift(sliceData.z)}
           </div>
+          {/* Round 7 — Prominent epoch description */}
+          {(() => {
+            const desc = describeRedshift(sliceData.z);
+            const nearMilestone = MILESTONES.reduce<{ ms: typeof MILESTONES[0]; dist: number } | null>((best, ms) => {
+              const dist = Math.abs(sliceData.z - ms.z) / Math.max(ms.z, 1);
+              if (!best || dist < best.dist) return { ms, dist };
+              return best;
+            }, null);
+            const useColor = nearMilestone && nearMilestone.dist < 0.3 ? nearMilestone.ms.color : "#cbd5e1";
+            return (
+              <div style={{
+                marginTop: "6px",
+                padding: "6px 8px",
+                background: "rgba(15,23,42,0.6)",
+                borderRadius: "4px",
+                borderLeft: `3px solid ${useColor}`,
+                fontSize: "13px",
+                fontWeight: 600,
+                color: useColor,
+                lineHeight: "1.3",
+                transition: "all 0.3s ease",
+              }}>
+                {desc}
+              </div>
+            );
+          })()}
         </div>
 
         {/* ΛCDM parameters */}
@@ -259,6 +285,23 @@ export function CosmicTimelineView() {
           <label style={styles.toggleLabel}>
             <input type="checkbox" checked={showHubble} onChange={(e) => setShowHubble(e.target.checked)} />
             <span>Hubble Sphere</span>
+            <span
+              title="The Hubble sphere is where the recession velocity equals the speed of light. Beyond it, space expands faster than c."
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "14px",
+                height: "14px",
+                borderRadius: "50%",
+                border: "1px solid #475569",
+                fontSize: "9px",
+                color: "#64748b",
+                cursor: "help",
+                marginLeft: "2px",
+                flexShrink: 0,
+              }}
+            >?</span>
           </label>
           <label style={styles.toggleLabel}>
             <input type="checkbox" checked={showParticles} onChange={(e) => setShowParticles(e.target.checked)} />
@@ -306,6 +349,35 @@ export function CosmicTimelineView() {
             {"\u0394"}t_obs = (1+z) {"\u00D7"} {"\u0394"}t_emit | H(z) = H{"\u2080"}{"\u221A"}({"\u03A9"}_m(1+z){"\u00B3"} + {"\u03A9"}_{"\u039B"})
           </div>
         </div>
+
+        {/* Round 6 — Light cone color legend */}
+        <div style={styles.flrwCard}>
+          <div style={styles.flrwTitle}>Light Cone Colors</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", justifyContent: "center", marginTop: "6px" }}>
+            <span style={{ fontSize: "10px", color: "#ef4444", whiteSpace: "nowrap" }}>CMB (z=1100)</span>
+            <svg width="120" height="16" style={{ flexShrink: 0 }}>
+              <defs>
+                <linearGradient id="cone-legend-grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#ef4444" />
+                  <stop offset="30%" stopColor="#f97316" />
+                  <stop offset="60%" stopColor="#34d399" />
+                  <stop offset="100%" stopColor="#60a5fa" />
+                </linearGradient>
+              </defs>
+              <rect x="0" y="3" width="120" height="10" rx="3" fill="url(#cone-legend-grad)" opacity="0.85" />
+            </svg>
+            <span style={{ fontSize: "10px", color: "#60a5fa", whiteSpace: "nowrap" }}>Present (z=0)</span>
+          </div>
+        </div>
+
+        {/* Round 10 — Age/distance conversion helper */}
+        <div style={styles.flrwCard}>
+          <div style={styles.flrwTitle}>Unit Conversions</div>
+          <div style={{ fontSize: "10px", color: "#94a3b8", lineHeight: "1.6", marginTop: "4px" }}>
+            <div>1 Gly = 1 billion light-years = 9.46 {"\u00D7"} 10{"\u00B2\u2074"} m</div>
+            <div>1 Gyr = 1 billion years = 3.156 {"\u00D7"} 10{"\u00B9\u2076"} s</div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -335,6 +407,8 @@ function CosmicScene({
       {showParticles && <ParticleField />}
       {showHubble && <HubbleSphere />}
       <ObserverMarker />
+      {/* Round 8 — Observable Universe Edge label at z=1100 */}
+      {showLabels && <ObservableUniverseLabel />}
     </group>
   );
 }
@@ -797,6 +871,40 @@ function ObserverMarker() {
         </div>
       </Html>
     </group>
+  );
+}
+
+// ─── Observable Universe Edge label (Round 8) ─────────────────────────────
+
+function ObservableUniverseLabel() {
+  const { y, r } = useMemo(() => {
+    const age = engine.ageAtRedshiftGyr(1100);
+    const cDist = engine.comovingDistanceGly(1100);
+    return { y: cosmicTimeToY(age), r: comovingToSceneR(cDist) };
+  }, []);
+
+  return (
+    <Html
+      position={[0, y - 0.3, 0]}
+      center
+      style={{ pointerEvents: "none" }}
+    >
+      <div
+        style={{
+          color: "#ef4444",
+          fontSize: "10px",
+          fontFamily: "'JetBrains Mono', monospace",
+          background: "rgba(1,1,8,0.9)",
+          padding: "3px 8px",
+          borderRadius: "3px",
+          whiteSpace: "nowrap",
+          border: "1px solid #ef444430",
+          textAlign: "center",
+        }}
+      >
+        Observable Universe Edge ~46 Gly
+      </div>
+    </Html>
   );
 }
 
