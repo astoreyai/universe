@@ -47,9 +47,8 @@ const SQRT_SCALE = 0.003;
 const MIN_R = 0.1;
 const SUN_R = Math.sqrt(696000) * SQRT_SCALE; // ~2.5 scene units
 const TIME_SPEED = 0.5;
-const MOON_ORBIT_SCALE = 0.000008; // Scale down moon orbital radii to scene units
-const MIN_MOON_R = 0.06;
-const MIN_MOON_ORBIT = 0.5;
+const MIN_MOON_R = 0.03;
+const MIN_MOON_ORBIT = 0.3;
 
 interface PData {
   name: string; au: number; period: number; rKm: number;
@@ -516,8 +515,12 @@ function MoonBody({ name, orbitR, radius, color, parentR, inclination, onClick }
   name: string; orbitR: number; radius: number; color: string; parentR: number; inclination: number; onClick: () => void;
 }) {
   const ref = useRef<THREE.Group>(null);
-  const moonR = Math.max(Math.log10(radius + 1) * 0.07, MIN_MOON_R);
-  const orbitSceneR = Math.max(orbitR * MOON_ORBIT_SCALE + parentR * 1.3, parentR + MIN_MOON_ORBIT);
+  // Same sqrt scaling as planets for consistent proportions
+  const moonR = Math.max(Math.sqrt(radius) * SQRT_SCALE, MIN_MOON_R);
+  // Orbit: sqrt of (real orbit / parent radius in km) * parent scene radius, offset from surface
+  const parentRealKm = (parentR / SQRT_SCALE) ** 2; // reverse sqrt to get parent km
+  const realOrbitRatio = orbitR / Math.max(parentRealKm, 1);
+  const orbitSceneR = Math.max(parentR * Math.sqrt(realOrbitRatio) * 0.7 + parentR * 1.2, parentR + MIN_MOON_ORBIT);
   // Amplify inclination for visibility (real values are tiny — Moon's 5.15° is the largest)
   const inclRad = (inclination * Math.PI) / 180 * 3; // 3x amplification
 
