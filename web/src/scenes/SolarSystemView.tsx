@@ -41,9 +41,11 @@ const MOONS: [string, string, number, number, string, number][] = [
 
 const BASE = import.meta.env.BASE_URL;
 const AU = 10;
-const PLANET_SCALE = 0.0006;
-const SUN_R = 0.5;
-const MIN_R = 0.25;
+// Sqrt scaling: preserves size ordering while keeping everything visible
+// Real sizes would make inner planets invisible — sqrt compresses the range
+const SQRT_SCALE = 0.003;
+const MIN_R = 0.1;
+const SUN_R = Math.sqrt(696000) * SQRT_SCALE; // ~2.5 scene units
 const TIME_SPEED = 0.5;
 const MOON_ORBIT_SCALE = 0.000008; // Scale down moon orbital radii to scene units
 const MIN_MOON_R = 0.06;
@@ -400,7 +402,7 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
   const gRef = useRef<THREE.Group>(null);
   const mRef = useRef<THREE.Mesh>(null);
   const orbR = d.au * AU;
-  const sz = Math.max(d.rKm * PLANET_SCALE, MIN_R);
+  const sz = Math.max(Math.sqrt(d.rKm) * SQRT_SCALE, MIN_R);
   const ddiff = d.df - refDf;
   const dColor = ddiff > 0 ? "#34d399" : "#f87171";
   const tzCount = getTimeZoneCount(d.name);
