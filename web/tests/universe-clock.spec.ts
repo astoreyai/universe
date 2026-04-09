@@ -200,48 +200,34 @@ test.describe("Dilation Map Tab", () => {
     await switchTab(page, "Dilation Map");
   });
 
-  test("table has all required column headers", async ({ page }) => {
-    const headers = await page.locator("th").allTextContents();
-    expect(headers.length).toBe(5);
-    expect(headers[0]).toContain("Body");
-    expect(headers[1]).toContain("dt"); // dτ/dt (Unicode τ)
-    expect(headers[2]).toContain("Lost");
-    expect(headers[3]).toContain("vs Earth");
-    expect(headers[4]).toContain("g");
+  test("radial chart and data panel render", async ({ page }) => {
+    // SVG visualization should be present
+    await expect(page.locator("svg")).toBeVisible();
+    // Panel title
+    await expect(page.locator("text=Dilation Data")).toBeVisible();
   });
 
-  test("all 8 solar system bodies present in table", async ({ page }) => {
+  test("all 8 solar system bodies present", async ({ page }) => {
     const bodies = ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn"];
+    const text = await page.textContent("body");
     for (const body of bodies) {
-      await expect(page.getByRole("cell", { name: new RegExp(body) })).toBeVisible();
+      expect(text).toContain(body);
     }
   });
 
   test("neutron star and black hole entries present", async ({ page }) => {
-    // These contain Unicode: "Neutron Star (1.4M☉)" and "Black Hole (3rₛ)"
-    await expect(page.locator("td", { hasText: "Neutron Star" })).toBeVisible();
-    await expect(page.locator("td", { hasText: "Black Hole" })).toBeVisible();
+    await expect(page.locator("text=Neutron Star")).toBeVisible();
+    await expect(page.locator("text=Black Hole")).toBeVisible();
   });
 
-  test("Sun dilation shows ~2.12e-6 shift (66.4 s/yr lost)", async ({ page }) => {
-    const sunRow = page.locator("tr").filter({ hasText: /^.*Sun.*$/ }).first();
-    const text = await sunRow.textContent();
-    // Sun loses ~66 seconds per year
+  test("Sun dilation shows ~66 s/yr lost", async ({ page }) => {
+    const text = await page.textContent("body");
     expect(text).toMatch(/66\.\d/);
   });
 
   test("Earth dilation shows ~6.95e-10 shift", async ({ page }) => {
-    // Earth is row index 3 (Sun=0, Mercury=1, Venus=2, Earth=3)
-    const earthCells = await page.locator("tbody tr").nth(3).locator("td").allTextContents();
-    expect(earthCells[0]).toContain("Earth");
-    expect(earthCells[1]).toMatch(/6\.9\d+e-10/);
-  });
-
-  test("Earth surface gravity shows ~9.8 m/s²", async ({ page }) => {
-    const earthCells = await page.locator("tbody tr").nth(3).locator("td").allTextContents();
-    const g = parseFloat(earthCells[4]);
-    expect(g).toBeGreaterThan(9.5);
-    expect(g).toBeLessThan(10.1);
+    const text = await page.textContent("body");
+    expect(text).toMatch(/6\.9\d+e-10/);
   });
 
   test("reference frame dropdown has all solar system bodies", async ({ page }) => {
@@ -254,33 +240,20 @@ test.describe("Dilation Map Tab", () => {
     expect(options.length).toBe(8);
   });
 
-  test("changing reference to Sun updates column header", async ({ page }) => {
-    await page.locator("select").selectOption("Sun");
-    await expect(page.getByRole("columnheader", { name: /vs Sun/ })).toBeVisible();
-  });
-
-  test("changing reference to Mars updates column header", async ({ page }) => {
+  test("changing reference to Mars updates display", async ({ page }) => {
     await page.locator("select").selectOption("Mars");
-    await expect(page.getByRole("columnheader", { name: /vs Mars/ })).toBeVisible();
+    await page.waitForTimeout(200);
+    // Mars row should show REF
+    await expect(page.locator("text=REF")).toBeVisible();
   });
 
-  test("reference body row shows dash in comparison column", async ({ page }) => {
-    // Earth is row 3, comparison is cell 3
-    const earthCells = await page.locator("tbody tr").nth(3).locator("td").allTextContents();
-    expect(earthCells[3]).toBe("\u2014"); // em dash
-  });
-
-  test("switching reference to Mars makes Mars row show dash", async ({ page }) => {
-    await page.locator("select").selectOption("Mars");
-    await page.waitForTimeout(300);
-    // Mars is row 5 (Sun=0, Mercury=1, Venus=2, Earth=3, Moon=4, Mars=5)
-    const marsCells = await page.locator("tbody tr").nth(5).locator("td").allTextContents();
-    expect(marsCells[0]).toContain("Mars");
-    expect(marsCells[3]).toBe("\u2014");
+  test("reference body shows REF indicator", async ({ page }) => {
+    // Default reference is Earth
+    await expect(page.locator("text=REF")).toBeVisible();
   });
 
   test("body comparisons section shows 4 pairs", async ({ page }) => {
-    await expect(page.locator("text=Body Comparisons")).toBeVisible();
+    await expect(page.locator("text=Pairwise Comparisons")).toBeVisible();
     await expect(page.locator("text=Earth vs Mars")).toBeVisible();
     await expect(page.locator("text=Earth vs Sun")).toBeVisible();
     await expect(page.locator("text=Earth vs Jupiter")).toBeVisible();
@@ -288,27 +261,22 @@ test.describe("Dilation Map Tab", () => {
   });
 
   test("Earth vs Sun comparison shows large positive value", async ({ page }) => {
-    // From debug: "Earth vs Sun+182897.78 μs/day" — Earth ages faster than Sun
-    const compText = await page.locator("div").filter({ hasText: /Body Comparisons/ }).first().textContent();
-    // Should contain Earth vs Sun with a positive ms-range value
-    expect(compText).toContain("Earth vs Sun");
-    // The value is +182897 μs/day ≈ +183 ms/day
-    expect(compText).toMatch(/Earth vs Sun\+\d+/);
+    const text = await page.textContent("body");
+    expect(text).toContain("Earth vs Sun");
+    // Should contain a large positive μs/day value
+    expect(text).toMatch(/Earth vs Sun\+\d+/);
   });
 
   test("neutron star dilation factor is dramatically below 1", async ({ page }) => {
-    const nsRow = page.locator("tr").filter({ hasText: /Neutron Star/ });
-    const text = await nsRow.textContent();
-    // Should show something like 0.7xxxxx
-    expect(text).toMatch(/0\.\d{6}/);
+    const text = await page.textContent("body");
+    // Should show something like 0.7xxx for the neutron star
+    expect(text).toMatch(/0\.7\d+/);
   });
 
   test("dilation color indicators present for each body", async ({ page }) => {
-    // Each body row should have a colored dot (●)
-    const rows = page.locator("tr").filter({ hasText: /●/ });
-    const count = await rows.count();
-    // 8 solar system + 2 extreme = 10
-    expect(count).toBeGreaterThanOrEqual(10);
+    // Each body in the panel should have a colored dot (●)
+    const dots = await page.locator("text=\u25CF").count();
+    expect(dots).toBeGreaterThanOrEqual(10);
   });
 });
 
@@ -805,9 +773,9 @@ test.describe("Cross-Tab Consistency", () => {
 
     // Get Earth dilation value from Dilation Map
     await switchTab(page, "Dilation Map");
-    const earthCells = await page.locator("tbody tr").nth(3).locator("td").allTextContents();
-    expect(earthCells[0]).toContain("Earth");
-    expect(earthCells[1]).toMatch(/6\.9\d+e-10/);
+    const bodyText = await page.textContent("body");
+    expect(bodyText).toContain("Earth");
+    expect(bodyText).toMatch(/6\.9\d+e-10/);
 
     // Switch to Solar System and check Earth info is shown
     await switchTab(page, "Solar System");

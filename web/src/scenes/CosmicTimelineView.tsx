@@ -354,8 +354,31 @@ function LightConeSurface() {
       }
     }
 
+    // Vertex colors: red (CMB/z~1100) → orange → cyan (present/z=0)
+    const colors = new Float32Array(vCount * 3);
+    for (let i = 0; i <= N_Z; i++) {
+      const t = i / N_Z; // 0=present, 1=CMB
+      // Color ramp: cyan(0) → green(0.3) → orange(0.7) → red(1.0)
+      let r, g, b;
+      if (t < 0.3) {
+        const f = t / 0.3;
+        r = 0.2 + f * 0.2; g = 0.6 + f * 0.2; b = 0.9 - f * 0.5;
+      } else if (t < 0.7) {
+        const f = (t - 0.3) / 0.4;
+        r = 0.4 + f * 0.5; g = 0.8 - f * 0.3; b = 0.4 - f * 0.3;
+      } else {
+        const f = (t - 0.7) / 0.3;
+        r = 0.9 + f * 0.1; g = 0.5 - f * 0.3; b = 0.1 - f * 0.05;
+      }
+      for (let j = 0; j <= N_THETA; j++) {
+        const idx = (i * (N_THETA + 1) + j) * 3;
+        colors[idx] = r; colors[idx + 1] = g; colors[idx + 2] = b;
+      }
+    }
+
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geom.setIndex(indices);
     geom.computeVertexNormals();
     return geom;
@@ -363,12 +386,12 @@ function LightConeSurface() {
 
   return (
     <group>
-      {/* Translucent surface */}
+      {/* Translucent surface with redshift color gradient */}
       <mesh geometry={geometry}>
         <meshBasicMaterial
-          color="#60a5fa"
+          vertexColors
           transparent
-          opacity={0.06}
+          opacity={0.1}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
@@ -376,7 +399,7 @@ function LightConeSurface() {
       {/* Wireframe overlay */}
       <lineSegments>
         <wireframeGeometry args={[geometry]} />
-        <lineBasicMaterial color="#60a5fa" transparent opacity={0.08} />
+        <lineBasicMaterial color="#60a5fa" transparent opacity={0.06} />
       </lineSegments>
     </group>
   );
@@ -642,15 +665,22 @@ function HubbleSphere() {
   }, []);
 
   return (
-    <mesh geometry={geometry}>
-      <meshBasicMaterial
-        color="#06b6d4"
-        transparent
-        opacity={0.05}
-        side={THREE.DoubleSide}
-        depthWrite={false}
-      />
-    </mesh>
+    <group>
+      <mesh geometry={geometry}>
+        <meshBasicMaterial
+          color="#06b6d4"
+          transparent
+          opacity={0.12}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Bright wireframe edge for visibility */}
+      <lineSegments>
+        <wireframeGeometry args={[geometry]} />
+        <lineBasicMaterial color="#06b6d4" transparent opacity={0.15} />
+      </lineSegments>
+    </group>
   );
 }
 
