@@ -248,9 +248,11 @@ function TravelerShip({ beta, gamma }: { beta: number; gamma: number }) {
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
-      // Oscillate along X axis to simulate outbound/return journey
+      // Oscillate along X axis — period proportional to journey duration
       const t = clock.getElapsedTime();
-      const phase = Math.sin(t * 0.4) * (3 + beta * 5);
+      const journeyPeriod = Math.max(gamma > 1.01 ? 4 / gamma : 8, 2); // faster journeys = faster oscillation
+      const amplitude = 3 + beta * 5;
+      const phase = Math.sin(t * (Math.PI / journeyPeriod)) * amplitude;
       groupRef.current.position.x = 4 + phase;
     }
     if (trailRef.current) {

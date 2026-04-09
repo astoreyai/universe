@@ -303,7 +303,7 @@ function CosmicScene({
   return (
     <group>
       <LightConeSurface />
-      <MilestoneRings showLabels={showLabels} />
+      <MilestoneRings showLabels={showLabels} epochAge={epochAge} />
       <CosmicTimeAxis />
       <EpochSlicePlane epochAge={epochAge} sliceZ={sliceZ} />
       {showParticles && <ParticleField />}
@@ -409,7 +409,7 @@ function LightConeSurface() {
 
 // ─── Milestone rings ───────────────────────────────────────────────────────
 
-function MilestoneRings({ showLabels }: { showLabels: boolean }) {
+function MilestoneRings({ showLabels, epochAge }: { showLabels: boolean; epochAge: number }) {
   const rings = useMemo(
     () =>
       MILESTONES.map((m) => {
@@ -424,14 +424,19 @@ function MilestoneRings({ showLabels }: { showLabels: boolean }) {
 
   return (
     <group>
-      {rings.map((m) => (
+      {rings.map((m) => {
+        // Glow when epoch slider is near this milestone
+        const proximity = Math.max(0, 1 - Math.abs(epochAge - m.age) / 1.5);
+        const ringWidth = 0.04 + proximity * 0.06;
+        const ringOpacity = 0.4 + proximity * 0.5;
+        return (
         <group key={m.z}>
           <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, m.y, 0]}>
-            <ringGeometry args={[Math.max(m.r - 0.04, 0), m.r + 0.04, 128]} />
+            <ringGeometry args={[Math.max(m.r - ringWidth, 0), m.r + ringWidth, 128]} />
             <meshBasicMaterial
               color={m.color}
               transparent
-              opacity={0.5}
+              opacity={ringOpacity}
               side={THREE.DoubleSide}
             />
           </mesh>
@@ -481,7 +486,8 @@ function MilestoneRings({ showLabels }: { showLabels: boolean }) {
             </Html>
           )}
         </group>
-      ))}
+        );
+      })}
     </group>
   );
 }

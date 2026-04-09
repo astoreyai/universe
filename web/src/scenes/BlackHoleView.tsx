@@ -301,10 +301,18 @@ function BlackHoleScene({
   // Scale: 1 unit = 1 rs
   const SCALE = 1;
 
+  const ringRefs = useRef<(THREE.Mesh | null)[]>([]);
+
   useFrame(({ clock }) => {
-    if (accretionRef.current) {
-      accretionRef.current.rotation.y = clock.getElapsedTime() * 0.3;
-    }
+    const t = clock.getElapsedTime();
+    // Each ring rotates at Keplerian speed: v ∝ r^(-1/2), so ω ∝ r^(-3/2)
+    ringRefs.current.forEach((mesh, i) => {
+      if (mesh) {
+        const r = 1.5 + i * 0.5;
+        const omega = 0.8 / Math.pow(r, 1.5); // Kepler
+        mesh.rotation.z = t * omega;
+      }
+    });
   });
 
   // Dilation rings: show color-coded dilation at different radii
@@ -337,13 +345,13 @@ function BlackHoleScene({
       </mesh>
 
       {/* Accretion disk — temperature gradient (hot blue-white inner, cooler red outer) */}
-      <group ref={accretionRef} rotation={[Math.PI * 0.08, 0, 0]}>
-        {dilationRings.map((ring) => {
+      <group rotation={[Math.PI * 0.08, 0, 0]}>
+        {dilationRings.map((ring, i) => {
           const t = (ring.radius - 1.5) / 8.5; // 0=inner, 1=outer
           // Temperature color: white-blue (inner) → orange → dark red (outer)
           const tempColor = t < 0.2 ? "#c0d8ff" : t < 0.4 ? "#ffd54f" : t < 0.7 ? "#ff8f00" : "#cc3300";
           return (
-            <mesh key={ring.radius} rotation={[Math.PI / 2, 0, 0]}>
+            <mesh key={ring.radius} ref={(el) => { ringRefs.current[i] = el; }} rotation={[Math.PI / 2, 0, 0]}>
               <ringGeometry args={[ring.radius * SCALE, (ring.radius + 0.35) * SCALE, 96]} />
               <meshBasicMaterial color={tempColor} transparent opacity={0.15 + (1 - t) * 0.35} side={THREE.DoubleSide} />
             </mesh>
