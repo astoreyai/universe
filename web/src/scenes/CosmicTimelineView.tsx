@@ -491,6 +491,22 @@ function CosmicScene({
 // ─── Light cone surface ────────────────────────────────────────────────────
 
 function LightConeSurface() {
+  // Bright rings at milestone epoch positions on the cone surface
+  const milestoneRings = useMemo(() => {
+    return MILESTONES.filter((m) => m.z > 0).map((m) => {
+      try {
+        const age = engine.ageAtRedshiftGyr(m.z);
+        const y = cosmicTimeToY(age);
+        const cDist = engine.comovingDistanceGly(m.z);
+        const r = comovingToSceneR(cDist);
+        return { ...m, y, r };
+      } catch {
+        const fallbackAge = m.z === 0 ? 13.8 : 0.001;
+        return { ...m, y: cosmicTimeToY(fallbackAge), r: 0 };
+      }
+    });
+  }, []);
+
   const geometry = useMemo(() => {
     const N_Z = 200;
     const N_THETA = 64;
@@ -584,6 +600,21 @@ function LightConeSurface() {
         <wireframeGeometry args={[geometry]} />
         <lineBasicMaterial color="#60a5fa" transparent opacity={0.12} />
       </lineSegments>
+      {/* Bright epoch rings on the cone surface at milestone positions */}
+      {milestoneRings.map((m) =>
+        m.r > 0.05 ? (
+          <mesh key={`cone-ring-${m.z}`} rotation={[Math.PI / 2, 0, 0]} position={[0, m.y, 0]}>
+            <ringGeometry args={[Math.max(m.r - 0.03, 0), m.r + 0.03, 128]} />
+            <meshBasicMaterial
+              color={m.color}
+              transparent
+              opacity={0.7}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        ) : null
+      )}
     </group>
   );
 }
