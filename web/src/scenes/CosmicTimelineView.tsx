@@ -481,7 +481,7 @@ function CosmicScene({
       <MilestoneRings showLabels={showLabels} epochAge={epochAge} />
       <CosmicTimeAxis />
       <EpochSlicePlane epochAge={epochAge} sliceZ={sliceZ} />
-      {showParticles && <ParticleField />}
+      {showParticles && <ParticleField epochAge={epochAge} />}
       {showHubble && <HubbleSphere epochAge={epochAge} hubbleRadius={hubbleRadius} />}
       <ObserverMarker />
       {/* Observable Universe Edge — marked by CMB milestone ring */}
@@ -831,7 +831,7 @@ function EpochSlicePlane({ epochAge, sliceZ }: { epochAge: number; sliceZ: numbe
 
 // ─── Particle field ────────────────────────────────────────────────────────
 
-function ParticleField() {
+function ParticleField({ epochAge }: { epochAge: number }) {
   const { positions, colors, sizes } = useMemo(() => {
     const N = 3000;
     const pos = new Float32Array(N * 3);
@@ -902,14 +902,23 @@ function ParticleField() {
     };
   }, []);
 
+  const epochY = cosmicTimeToY(epochAge);
+
   return (
-    <points>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.06} vertexColors transparent opacity={0.7} sizeAttenuation />
-    </points>
+    <group>
+      <points>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+          <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+        </bufferGeometry>
+        <pointsMaterial size={0.06} vertexColors transparent opacity={0.7} sizeAttenuation />
+      </points>
+      {/* Veil of time — darkens particles above the epoch slice */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, epochY + 0.1, 0]}>
+        <planeGeometry args={[20, 20]} />
+        <meshBasicMaterial color="#020208" transparent opacity={0.7} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+    </group>
   );
 }
 

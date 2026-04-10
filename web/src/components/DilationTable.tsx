@@ -171,6 +171,20 @@ export function DilationTable() {
                 {isHovered && BODY_DESCRIPTIONS[b.name] && (
                   <div style={styles.bodyDesc}>{BODY_DESCRIPTIONS[b.name]}</div>
                 )}
+                {isHovered && (() => {
+                  const earthBody = allBodies.find(x => x.name === "Earth");
+                  const sunBody = allBodies.find(x => x.name === "Sun");
+                  if (!earthBody) return null;
+                  const earthShift = 1 - earthBody.dilation_factor;
+                  const bodyShift = 1 - b.dilation_factor;
+                  const realDepthRatio = earthShift > 0 ? (bodyShift / earthShift).toFixed(1) : "\u2014";
+                  const sunRatio = earthShift > 0 && sunBody ? ((1 - sunBody.dilation_factor) / earthShift).toFixed(1) : "\u2014";
+                  return (
+                    <div style={{ fontSize: "9px", color: "#a78bfa", marginTop: "3px", lineHeight: 1.4, fontStyle: "italic" }}>
+                      Real scale: {b.name}&apos;s well is {realDepthRatio}x Earth&apos;s. Sun = {sunRatio}x Earth.
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
