@@ -290,9 +290,16 @@ export function ClockDashboard() {
           {CLOCKS.map((c) => {
             const val = clockValues[c.key];
             const isSel = selectedClock === c.key;
+            const isRowHov = hoveredClock === c.key;
             return (
-              <div key={c.key} style={{ ...styles.clockRow, ...(isSel ? { borderLeft: `3px solid ${c.color}` } : {}) }}
-                onClick={() => setSelectedClock(isSel ? null : c.key)}>
+              <div key={c.key} style={{
+                  ...styles.clockRow,
+                  ...(isSel ? { borderLeft: `3px solid ${c.color}`, boxShadow: `0 0 12px ${c.color}30` } : {}),
+                  ...(isRowHov && !isSel ? { boxShadow: `0 0 10px ${c.color}20` } : {}),
+                }}
+                onClick={() => setSelectedClock(isSel ? null : c.key)}
+                onMouseEnter={() => setHoveredClock(c.key)}
+                onMouseLeave={() => setHoveredClock(null)}>
                 <div style={{ ...styles.clockLabel, color: c.color }}>{c.label}</div>
                 <div style={styles.clockValue}>{val.main}</div>
                 <div style={styles.clockDetail}>{val.detail}</div>
@@ -401,7 +408,6 @@ const styles: Record<string, React.CSSProperties> = {
   clockRow: {
     background: "#0f172a", borderRadius: "6px", padding: "6px 10px",
     cursor: "pointer", transition: "all 0.2s ease", borderLeft: "3px solid transparent",
-    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   clockLabel: { fontSize: "11px", fontWeight: 700, letterSpacing: "2px" },
   clockValue: { fontSize: "13px", fontWeight: 600, color: "#f1f5f9", fontVariantNumeric: "tabular-nums" },

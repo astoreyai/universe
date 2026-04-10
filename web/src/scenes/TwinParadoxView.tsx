@@ -276,7 +276,7 @@ function EarthTwin({ gamma }: { gamma: number }) {
     <group position={[-4, 0, 0]}>
       <mesh ref={ref}>
         <sphereGeometry args={[0.9, 32, 32]} />
-        <meshStandardMaterial color="#4a90d9" roughness={0.7} metalness={0.1} emissive="#4a90d9" emissiveIntensity={0.25} />
+        <meshStandardMaterial color="#4a90d9" roughness={0.7} metalness={0.1} emissive="#4a90d9" emissiveIntensity={0.3} />
       </mesh>
       {/* Atmosphere glow — breathing */}
       <mesh ref={atmoRef}>
