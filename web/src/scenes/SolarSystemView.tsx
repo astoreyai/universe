@@ -409,6 +409,11 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
         <sphereGeometry args={[SUN_R * 5.0, 32, 32]} />
         <meshBasicMaterial color="#ff6f00" transparent opacity={0.02} />
       </mesh>
+      {/* Ultra-faint diffuse solar corona — ambient warm wash */}
+      <mesh>
+        <sphereGeometry args={[SUN_R * 8.0, 32, 32]} />
+        <meshBasicMaterial color="#ff6f00" transparent opacity={0.008} />
+      </mesh>
       <pointLight position={[0, 0, 0]} intensity={5} color="#fff3e0" distance={400} decay={1.5} />
       {selected && (
         <mesh rotation={[Math.PI / 2, 0, 0]}>

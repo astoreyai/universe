@@ -396,6 +396,7 @@ function BlackHoleScene({
   const accretionRef = useRef<THREE.Group>(null);
   const observerRef = useRef<THREE.Group>(null);
   const horizonRef = useRef<THREE.Mesh>(null);
+  const photonSphereRef = useRef<THREE.Mesh>(null);
 
   // Scale: 1 unit = 1 rs
   const SCALE = 1;
@@ -407,6 +408,12 @@ function BlackHoleScene({
     // Slowly rotate event horizon for visual life
     if (horizonRef.current) {
       horizonRef.current.rotation.y += 0.01;
+    }
+    // Photon sphere shimmer — oscillate scale on X and Z axes
+    if (photonSphereRef.current) {
+      const sx = 1.0 + 0.02 * Math.sin(t * 1.3);
+      const sz = 1.0 + 0.02 * Math.sin(t * 1.7);
+      photonSphereRef.current.scale.set(sx, 1, sz);
     }
     // Each ring rotates at Keplerian speed: v ∝ r^(-1/2), so ω ∝ r^(-3/2)
     ringRefs.current.forEach((mesh, i) => {
@@ -452,8 +459,8 @@ function BlackHoleScene({
         </div>
       </Html>
 
-      {/* Photon sphere glow (1.5 rₛ) — bright ring where light orbits */}
-      <mesh>
+      {/* Photon sphere glow (1.5 rₛ) — bright ring where light orbits, shimmers via useFrame */}
+      <mesh ref={photonSphereRef}>
         <sphereGeometry args={[1.5 * SCALE, 48, 48]} />
         <meshBasicMaterial color="#ff8f00" transparent opacity={0.06} />
       </mesh>
