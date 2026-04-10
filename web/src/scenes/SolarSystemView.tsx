@@ -342,7 +342,7 @@ export function SolarSystemView() {
                 <input type="range" min="0.1" max="5" step="0.1" value={timeSpeed}
                   onChange={(e) => setTimeSpeed(parseFloat(e.target.value))} style={{ width: "100%", accentColor: "#3b82f6" }} />
                 <div style={{ fontSize: "9px", color: "#475569", textAlign: "center" as const }}>
-                  1 second {"\u2248"} {Math.round(timeSpeed * 365.25)} days
+                  1 second {"\u2248"} {Math.round(timeSpeed * 365.25)} days of orbital motion
                 </div>
               </div>
 
@@ -359,6 +359,9 @@ export function SolarSystemView() {
                   <input type="checkbox" checked={showOrbits} onChange={(e) => setShowOrbits(e.target.checked)} />
                   <span>Orbital Planes</span>
                 </label>
+              </div>
+              <div style={{ fontSize: "9px", color: "#475569", fontStyle: "italic", marginTop: "2px" }}>
+                Trails show orbital motion {"\u2014"} brighter = selected planet
               </div>
 
               <div style={{ ...S.note, marginTop: "6px" }}>

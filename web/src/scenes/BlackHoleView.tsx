@@ -174,6 +174,9 @@ export function BlackHoleView() {
           value={spin}
           onChange={setSpin}
         />
+        <div style={{ fontSize: "9px", color: "#64748b", fontStyle: "italic", marginTop: "-6px", marginBottom: "4px" }}>
+          {spin === 0 ? "(non-rotating Schwarzschild)" : "(rotating Kerr black hole)"}
+        </div>
         <SliderControl
           label={`Observer: ${observerR.toFixed(1)} r\u209b`}
           min={1.1}
@@ -186,6 +189,15 @@ export function BlackHoleView() {
             setTimeout(() => setResultFlash(false), 300);
           }}
         />
+        {observerR < 1.5 ? (
+          <div style={{ fontSize: "9px", color: "#ef4444", fontWeight: 600, marginTop: "-4px", marginBottom: "4px" }}>
+            Inside photon sphere!
+          </div>
+        ) : observerR < 3 ? (
+          <div style={{ fontSize: "9px", color: "#fbbf24", fontWeight: 600, marginTop: "-4px", marginBottom: "4px" }}>
+            Inside ISCO {"\u2014"} unstable!
+          </div>
+        ) : null}
 
         <div style={{
           ...styles.results,
