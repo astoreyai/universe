@@ -127,9 +127,7 @@ export function DilationTable() {
         <div style={styles.whyCard}>
           <div style={styles.whyTitle}>Why This Matters</div>
           <div style={styles.whyText}>
-            Mass curves spacetime. Clocks deeper in a gravity well tick slower.
-            GPS satellites at 20,200 km altitude experience weaker gravity — their
-            clocks tick +38.6 {"\u03BCs"}/day faster. Without correction, GPS drifts ~10 km/day.
+            The grid curves deeper near massive objects {"\u2014"} that curvature IS gravity. Clocks at the bottom of a well tick slower. GPS satellites orbit above Earth's well, so their clocks tick +38.6 {"\u03BCs"}/day faster. The deeper the well, the greater the effect.
           </div>
         </div>
 

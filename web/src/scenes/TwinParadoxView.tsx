@@ -209,6 +209,60 @@ export function TwinParadoxView() {
           <TimeBar label="Traveler" years={results.travelerAgingYears} max={results.coordTimeYears} color="#f59e0b" />
         </div>
 
+        {/* Minkowski worldline diagram */}
+        <div style={styles.worldlineSection}>
+          <div style={styles.worldlineTitle}>Spacetime Diagram</div>
+          <svg viewBox="0 0 200 200" style={{ width: "100%", maxHeight: "180px" }}>
+            {/* Background */}
+            <rect width="200" height="200" fill="#0a0f18" rx="4" />
+
+            {/* Grid lines */}
+            {[40, 80, 120, 160].map(v => (
+              <g key={v}>
+                <line x1={v} y1={10} x2={v} y2={190} stroke="#1e293b" strokeWidth={0.5} />
+                <line x1={10} y1={v} x2={190} y2={v} stroke="#1e293b" strokeWidth={0.5} />
+              </g>
+            ))}
+
+            {/* Axes */}
+            <line x1={100} y1={190} x2={100} y2={10} stroke="#475569" strokeWidth={1} />
+            <line x1={10} y1={100} x2={190} y2={100} stroke="#475569" strokeWidth={0.5} />
+            <text x={103} y={18} fill="#64748b" fontSize={8}>time (ct)</text>
+            <text x={170} y={96} fill="#64748b" fontSize={8}>space (x)</text>
+
+            {/* Light cones — 45 degree lines */}
+            <line x1={100} y1={190} x2={10} y2={100} stroke="#fbbf24" strokeWidth={0.5} strokeDasharray="3,3" opacity={0.3} />
+            <line x1={100} y1={190} x2={190} y2={100} stroke="#fbbf24" strokeWidth={0.5} strokeDasharray="3,3" opacity={0.3} />
+            <text x={30} y={155} fill="#fbbf24" fontSize={7} opacity={0.5}>light cone</text>
+
+            {/* Earth twin worldline — vertical (stays at x=100) */}
+            <line x1={100} y1={190} x2={100} y2={10} stroke="#4a90d9" strokeWidth={2} />
+            <text x={104} y={185} fill="#4a90d9" fontSize={8}>Earth</text>
+
+            {/* Traveler worldline — angled outbound then return */}
+            <polyline
+              points={`100,190 ${100 + active.speed * 80},100 100,10`}
+              fill="none" stroke="#f59e0b" strokeWidth={2}
+            />
+            <text x={100 + active.speed * 40 + 3} y={145} fill="#f59e0b" fontSize={8}>Traveler</text>
+
+            {/* Proper time labels */}
+            <text x={85} y={100} fill="#4a90d9" fontSize={7} textAnchor="end">
+              {results.earthAgingYears.toFixed(1)} yr
+            </text>
+            <text x={100 + active.speed * 80 + 3} y={100} fill="#f59e0b" fontSize={7}>
+              {results.travelerAgingYears.toFixed(1)} yr
+            </text>
+
+            {/* Turnaround point */}
+            <circle cx={100 + active.speed * 80} cy={100} r={3} fill="#ef4444" />
+            <text x={100 + active.speed * 80 + 5} y={97} fill="#ef4444" fontSize={7}>turnaround</text>
+          </svg>
+          <div style={{ fontSize: "9px", color: "#64748b", marginTop: "4px", fontStyle: "italic" }}>
+            The traveler's path through spacetime is SHORTER (fewer ticks) than Earth's straight worldline. Shorter path = less aging.
+          </div>
+        </div>
+
         {/* Learn More — collapsible */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontSize: "11px", color: "#64748b", fontWeight: 600 }}
@@ -228,8 +282,7 @@ export function TwinParadoxView() {
 
               {/* Why This Matters */}
               <div style={{ ...styles.infoCard, marginTop: "6px" }}>
-                <p style={{ margin: "0 0 6px 0" }}>The twin paradox is real — verified by flying atomic clocks on aircraft (Hafele-Keating, 1971) and by GPS satellite corrections every day. Astronaut Scott Kelly aged 5 milliseconds less than his twin Mark during 340 days on the ISS.</p>
-                <p style={{ margin: 0 }}>Note: This visualization assumes instantaneous turnaround. In reality, the traveling twin must accelerate to reverse direction — this acceleration breaks the symmetry and resolves the &apos;paradox.&apos; The twin who felt the g-forces is the one who ages less.</p>
+                <p style={{ margin: "0 0 6px 0" }}>The {"\u2018"}paradox{"\u2019"} resolves because the twins aren{"\u2019"}t symmetric {"\u2014"} the traveler must accelerate to turn around. This was confirmed in 1971 when Hafele and Keating flew cesium clocks on aircraft: eastbound clocks lost 59 ns, westbound gained 273 ns {"\u2014"} exactly matching relativistic predictions. Astronaut Scott Kelly aged 5 ms less than his twin Mark during 340 days on the ISS.</p>
               </div>
             </>
           )}
@@ -863,5 +916,18 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: "1.5",
     borderLeft: "3px solid #3b82f6",
     boxShadow: "0 0 15px rgba(0,0,0,0.3)",
+  },
+  worldlineSection: {
+    background: "#0f172a",
+    borderRadius: "6px",
+    padding: "8px",
+    boxShadow: "0 0 15px rgba(0,0,0,0.3)",
+  },
+  worldlineTitle: {
+    fontSize: "11px",
+    fontWeight: 600,
+    color: "#8b5cf6",
+    marginBottom: "6px",
+    letterSpacing: "0.5px",
   },
 };
