@@ -475,8 +475,8 @@ function CosmicScene({
       {showParticles && <ParticleField />}
       {showHubble && <HubbleSphere epochAge={epochAge} hubbleRadius={hubbleRadius} />}
       <ObserverMarker />
-      {/* Round 8 — Observable Universe Edge label at z=1100 */}
-      {showLabels && <ObservableUniverseLabel />}
+      {/* Observable Universe Edge — marked by CMB milestone ring */}
+      {/* ObservableUniverseLabel removed — CMB milestone ring serves this purpose */}
     </group>
   );
 }
@@ -903,21 +903,7 @@ function HubbleSphere({ epochAge, hubbleRadius }: { epochAge: number; hubbleRadi
         <wireframeGeometry args={[geometry]} />
         <lineBasicMaterial color="#06b6d4" transparent opacity={0.15} />
       </lineSegments>
-      {/* Hubble sphere label */}
-      <Html position={[3, SCENE_HEIGHT / 2, 0]} center style={{ pointerEvents: "none" }}>
-        <div style={{
-          color: "#06b6d4",
-          fontSize: "10px",
-          fontFamily: "'JetBrains Mono', monospace",
-          background: "rgba(1,1,8,0.9)",
-          padding: "3px 8px",
-          borderRadius: "3px",
-          whiteSpace: "nowrap",
-          border: "1px solid #06b6d430",
-        }}>
-          Hubble Sphere at {epochAge.toFixed(1)} Gyr: {hubbleRadius.toFixed(2)} Gly — beyond here, recession &gt; c
-        </div>
-      </Html>
+      {/* Hubble sphere info in panel — floating 3D label removed */}
     </group>
   );
 }

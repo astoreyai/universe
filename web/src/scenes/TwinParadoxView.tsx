@@ -248,14 +248,7 @@ function TwinScene({ beta, gamma }: { beta: number; gamma: number }) {
       <TravelerShip beta={beta} gamma={gamma} />
       <SpacetimeGrid beta={beta} />
       <StreakingStars beta={beta} />
-      {/* Doppler legend */}
-      <Html position={[12, 4, 0]} center style={{ pointerEvents: "none" }}>
-        <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(1,1,8,0.9)", padding: "4px 8px", borderRadius: "4px", whiteSpace: "nowrap", border: "1px solid #1e293b" }}>
-          <span style={{ color: "#60a5fa" }}>{"\u2605"} Blue = approaching</span>
-          <span style={{ color: "#475569", margin: "0 4px" }}>|</span>
-          <span style={{ color: "#ef4444" }}>{"\u2605"} Red = receding</span>
-        </div>
-      </Html>
+      {/* Doppler legend moved to panel — removed floating 3D label */}
       {/* Round 5 — Reference cubes for Lorentz contraction comparison */}
       <ContractionCubes gamma={gamma} />
       {/* Round 7 — Speed of light indicator line */}
@@ -426,11 +419,7 @@ function SpacetimeGrid({ beta }: { beta: number }) {
       <lineSegments geometry={geometry}>
         <lineBasicMaterial color="#3b82f6" transparent opacity={0.4} />
       </lineSegments>
-      <Html position={[-12, -1.5, 0]} center style={{ pointerEvents: "none" }}>
-        <div style={{ color: "#3b82f6", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(1,1,8,0.85)", padding: "2px 6px", borderRadius: "3px", whiteSpace: "nowrap" }}>
-          Grid spacing contracted by 1/{"\u03B3"} = {contractFactor.toFixed(3)}
-        </div>
-      </Html>
+      {/* Grid contraction info moved to panel — removed floating label */}
     </group>
   );
 }

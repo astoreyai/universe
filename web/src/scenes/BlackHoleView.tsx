@@ -512,12 +512,7 @@ function BlackHoleScene({
       {/* Round 8 — Photon sphere orbit with orbiting photon dot at 1.5rs */}
       <PhotonSphereOrbit scale={SCALE} />
 
-      {/* Lensing explanation label */}
-      <Html position={[0, -2, 0]} center style={{ pointerEvents: "none" }}>
-        <div style={{ color: "#64748b", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(10,15,24,0.85)", padding: "3px 8px", borderRadius: "4px", whiteSpace: "nowrap", maxWidth: "320px", textAlign: "center" }}>
-          Light bends near the event horizon — the distorted background is gravitational lensing (Einstein ring effect)
-        </div>
-      </Html>
+      {/* Lensing explanation moved to panel "Learn More" section */}
 
       {/* Round 9 — Warning label when observer approaches event horizon */}
       {observerRs < 2 && (

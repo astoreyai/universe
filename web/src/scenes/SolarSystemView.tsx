@@ -168,19 +168,7 @@ export function SolarSystemView() {
           {/* Round 10 — Habitable zone indicator */}
           {showOrbits && <HabitableZone />}
 
-          {/* Scale indicator at 1 AU */}
-          <Html position={[AU, -1.5, 0]} center style={{ pointerEvents: "none" }}>
-            <div style={{ color: "#94a3b8", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", borderTop: "1px solid #334155", paddingTop: "2px", textAlign: "center", width: "60px" }}>
-              1 AU
-            </div>
-          </Html>
-
-          {/* Scaling disclaimer */}
-          <Html position={[AU, -2.5, 0]} center style={{ pointerEvents: "none" }}>
-            <div style={{ color: "#64748b", fontSize: "8px", fontFamily: "'JetBrains Mono', monospace", textAlign: "center", width: "200px", lineHeight: "1.3" }}>
-              Sizes: {"\u221A"}-scaled for visibility. Real planets are much smaller relative to orbits.
-            </div>
-          </Html>
+          {/* Scale/disclaimer info moved to panel — removed from 3D scene to avoid floating text */}
 
           <DreiStars radius={200} depth={150} count={8000} factor={4} saturation={0.1} fade speed={0.5} />
 
@@ -502,17 +490,10 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
 
       {/* Time zone grid overlay */}
       {showGrid && (
-        <>
-          <mesh>
-            <sphereGeometry args={[sz * 1.003, 64, 64]} />
-            <primitive object={gridMat} attach="material" />
-          </mesh>
-          <Html position={[0, -3, 0]} center style={{ pointerEvents: "none" }}>
-            <div style={{ color: "#94a3b8", fontSize: "9px", fontStyle: "italic", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
-              Grid shows planetary rotation: longitude lines = time zones, latitude lines = geographic reference
-            </div>
-          </Html>
-        </>
+        <mesh>
+          <sphereGeometry args={[sz * 1.003, 64, 64]} />
+          <primitive object={gridMat} attach="material" />
+        </mesh>
       )}
 
       {/* Atmosphere */}
