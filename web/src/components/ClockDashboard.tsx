@@ -41,6 +41,11 @@ const MAX_RATE = Math.max(...CLOCKS.filter(c => c.key !== "mtc").map(c => c.rate
 
 // Tier labels
 const TIER_LABELS = ["Earth Reference Refinements", "Gravity-Corrected", "Planetary"];
+const TIER_PUNCHLINES = [
+  "We pretend all Earth clocks tick the same \u2014 they don\u2019t",
+  "Remove Earth\u2019s gravity well \u2014 clocks tick faster",
+  "Every world keeps its own time",
+];
 
 // ─── Main component ────────────────────────────────────────────────────────
 
@@ -152,7 +157,10 @@ export function ClockDashboard() {
                 <text x={320} y={tierY - 60} textAnchor="middle" fill="#64748b" fontSize={10} fontWeight={600} letterSpacing={1.5} textDecoration="none">
                   {tierLabel.toUpperCase()}
                 </text>
-                <line x1={320 - 80} y1={tierY - 55} x2={320 + 80} y2={tierY - 55} stroke="#1e293b" strokeWidth={0.5} />
+                <text x={320} y={tierY - 48} textAnchor="middle" fill="#64748b" fontSize={9} fontStyle="italic">
+                  {TIER_PUNCHLINES[tierIdx]}
+                </text>
+                <line x1={320 - 80} y1={tierY - 43} x2={320 + 80} y2={tierY - 43} stroke="#1e293b" strokeWidth={0.5} />
 
                 {/* Clocks in this tier */}
                 {clocks.map((c, colIdx) => {

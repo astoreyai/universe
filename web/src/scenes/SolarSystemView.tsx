@@ -519,8 +519,8 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
         const glowColor = dilationGlow > 0.001 ? "#ef4444" : "#34d399";
         return dilationGlow > 0 ? (
           <mesh>
-            <sphereGeometry args={[sz * (1 + dilationGlow), 32, 32]} />
-            <meshBasicMaterial color={glowColor} transparent opacity={0.08} side={THREE.BackSide} depthWrite={false} />
+            <sphereGeometry args={[sz * (1 + dilationGlow * 2), 32, 32]} />
+            <meshBasicMaterial color={glowColor} transparent opacity={0.16} side={THREE.BackSide} depthWrite={false} />
           </mesh>
         ) : null;
       })()}
@@ -546,7 +546,7 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
         <Html position={[0, sz + 0.4, 0]} center style={{ pointerEvents: "none" }}>
           <div style={{ color: "#f1f5f9", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", background: "rgba(15,23,42,0.85)", padding: "4px 10px", borderRadius: "4px", border: `1px solid ${d.color}50`, backdropFilter: "blur(4px)", whiteSpace: "nowrap" }}>
             <div style={{ fontWeight: 700, marginBottom: "2px" }}>{d.name}</div>
-            <div style={{ color: dColor, fontSize: "10px" }}>
+            <div style={{ color: dColor, fontSize: "12px", fontWeight: 700 }}>
               {ddiff >= 0 ? "+" : ""}{(ddiff * 86400 * 1e6).toFixed(2)} {"\u03BCs/day"}
             </div>
             <div style={{ color: "#94a3b8", fontSize: "10px" }}>
