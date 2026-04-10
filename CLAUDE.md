@@ -8,11 +8,15 @@ Relativistic multi-frame temporal system spanning planetary to cosmological scal
   - 11 solar system bodies (Sun through Pluto), neutron star, Sgr A*
   - 35 unit tests
 - **web/** — React 19 + Vite + R3F frontend with WASM integration
-  - 6 tabs: Time Scales, Dilation Map, Solar System (3D), Black Hole (3D), Twin Paradox (3D), Cosmology (3D)
-  - NASA texture maps for all planets, Sun, Moon
-  - 14 moons with real orbital inclinations
+  - 6 tabs: Time Scales (SVG), Dilation Map (3D spacetime), Solar System (3D), Black Hole (3D), Twin Paradox (3D), Cosmology (3D)
+  - NASA texture maps for all 11 planets + Sun + Moon (13 textures)
+  - 14 moons with real orbital inclinations (NASA/Wikipedia sources)
+  - Curved spacetime embedding diagram (Dilation Map)
+  - Minkowski worldline diagram (Twin Paradox)
   - Mobile responsive (breakpoints at 768px, 480px)
-  - Keyboard nav: 1-6 switches tabs, Escape unfocuses
+  - Keyboard nav: 1-6 switches tabs
+  - ARIA accessibility: tablist/tab roles, aria-selected, prefers-reduced-motion
+  - Per-tab accent colors, glassmorphism panels, custom scrollbars
 - **py/** — Python validation scripts (astropy cross-check) [placeholder]
 
 ## Build
@@ -53,12 +57,12 @@ Live at: https://astoreyai.github.io/universe/
 
 | Tab | Visualization | Key Features |
 |-----|--------------|--------------|
-| Time Scales | SVG animated clocks | 6 clock faces ticking at real rates, live drift counter, rate comparison bars |
-| Dilation Map | SVG radial chart | Gravity well visualization, severity sorting, hover descriptions, escape velocity |
-| Solar System | 3D R3F scene | NASA textures, 9 planets + Pluto, 14 moons (clickable), asteroid + Kuiper belts, habitable zone, time zone grids |
-| Black Hole | 3D R3F scene | Gravitational lensing shader, Keplerian accretion disk, jets, ergosphere, ISCO marker, photon orbit |
-| Twin Paradox | 3D R3F scene | Differential clocks, Lorentz contraction, Doppler-shifted stars, contraction cubes, distance ruler |
-| Cosmology | 3D R3F scene | Light cone with redshift gradient, epoch slider, cosmic web particles, Hubble sphere, milestone glow |
+| Time Scales | SVG animated clocks | 3 tiers, glowing hands, rate bars, drift calculator, 1-min takeaway |
+| Dilation Map | 3D curved spacetime | Deformable grid, gravity wells, body spheres, bloom, "Why It Matters" |
+| Solar System | 3D R3F scene | NASA textures, 9+Pluto, 14 moons (clickable), asteroid/Kuiper belts, habitable zone, dilation glow, speed control |
+| Black Hole | 3D R3F scene | Gravitational lensing shader, Keplerian accretion disk, jets, ergosphere, ISCO, photon orbit, log-scale profile, danger zone |
+| Twin Paradox | 3D R3F scene | Minkowski worldline diagram, differential clocks, Lorentz contraction cubes, Doppler stars, relativistic callout |
+| Cosmology | 3D R3F scene | Light cone with redshift gradient, milestone light rings, cosmic web particles, Hubble sphere, epoch slider, scale factor bar |
 
 ## Engine WASM Exports
 
