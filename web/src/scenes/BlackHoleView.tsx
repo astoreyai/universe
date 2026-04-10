@@ -259,7 +259,7 @@ export function BlackHoleView() {
               </div>
 
               {/* Why This Matters */}
-              <div style={{ ...styles.infoCard, marginTop: "6px" }}>
+              <div style={{ ...styles.infoCard, marginTop: "6px", fontSize: "11px", color: "#e2e8f0", lineHeight: 1.5 }}>
                 The closer to the event horizon, the slower time moves. At dilation = 0.1, 1 second for you = 10 for a distant observer. The distorted starfield is gravitational lensing — light bends around the black hole, forming an Einstein ring. Accretion disks glow because infalling matter converts gravitational energy to radiation — powering quasars across billions of light-years.
               </div>
             </>
@@ -774,6 +774,8 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#64748b",
     letterSpacing: "0.5px",
     marginBottom: "4px",
+    fontWeight: 600,
+    textTransform: "uppercase" as const,
   },
   svg: {
     width: "100%",

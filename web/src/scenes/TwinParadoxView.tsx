@@ -729,7 +729,7 @@ function TimeBar({ label, years, max, color }: { label: string; years: number; m
       <div style={styles.timelineBar}>
         <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "9px", transition: "width 0.5s ease", position: "relative" }}>
           <div style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", fontSize: "9px", color: "#fff", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
-            {years.toFixed(2)}
+            {years.toFixed(2)} yr
           </div>
         </div>
       </div>

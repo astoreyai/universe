@@ -415,5 +415,5 @@ const styles: Record<string, React.CSSProperties> = {
   driftRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#94a3b8", fontVariantNumeric: "tabular-nums" },
   infoCard: { background: "#0f172a", borderRadius: "6px", padding: "10px", boxShadow: "0 0 15px rgba(0,0,0,0.3)" },
   whyText: { fontSize: "11px", color: "#e2e8f0", lineHeight: 1.5 },
-  constants: { fontSize: "10px", color: "#64748b", display: "flex", flexDirection: "column", gap: "2px" },
+  constants: { fontSize: "10px", color: "#64748b", display: "flex", flexDirection: "column", gap: "2px", fontFamily: "'JetBrains Mono', monospace" },
 };
