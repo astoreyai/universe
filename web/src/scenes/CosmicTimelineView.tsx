@@ -1124,6 +1124,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "12px",
     color: "#94a3b8",
     fontVariantNumeric: "tabular-nums",
+    fontFamily: "'JetBrains Mono', monospace",
   },
   paramSection: {
     background: "#0f172a",
@@ -1179,6 +1180,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "3px 6px",
     borderBottom: "1px solid #0f172a",
     color: "#e2e8f0",
+    fontFamily: "'JetBrains Mono', monospace",
   },
   tdMono: {
     padding: "3px 6px",

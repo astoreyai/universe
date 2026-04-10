@@ -164,7 +164,7 @@ export function DilationTable() {
                     {isRef ? "REF" : formatMicroseconds(relDiff) + "/day"}
                   </span>
                 </div>
-                {vEsc && <div style={styles.bodyDetail}><span>v_esc: {(vEsc / 1000).toFixed(1)} km/s</span></div>}
+                {vEsc && <div style={styles.bodyDetail}><span title="Escape velocity at the surface">v_esc: {(vEsc / 1000).toFixed(1)} km/s</span></div>}
                 {isHovered && BODY_DESCRIPTIONS[b.name] && (
                   <div style={styles.bodyDesc}>{BODY_DESCRIPTIONS[b.name]}</div>
                 )}
@@ -320,11 +320,12 @@ const styles: Record<string, React.CSSProperties> = {
   select: {
     background: "#1e293b", color: "#e2e8f0", border: "1px solid #334155",
     borderRadius: "4px", padding: "4px 8px", fontSize: "11px", fontFamily: "inherit", flex: 1,
+    cursor: "pointer",
   },
   dataList: { display: "flex", flexDirection: "column", gap: "6px" },
   dataRow: {
     background: "#0f172a", borderRadius: "6px", padding: "8px",
-    transition: "all 0.2s ease", borderLeft: "2px solid transparent",
+    cursor: "pointer", transition: "all 0.2s ease", borderLeft: "2px solid transparent",
     boxShadow: "0 0 15px rgba(0,0,0,0.3)",
   },
   refRow: { background: "#1e293b30", border: "1px solid #3b82f640" },

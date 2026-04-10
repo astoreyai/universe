@@ -931,7 +931,7 @@ const S: Record<string, React.CSSProperties> = {
   compHdr: { fontSize: "11px", color: "#64748b", letterSpacing: "0.5px", marginBottom: "2px" },
   compRow: { display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0", borderBottom: "1px solid #0a0f18" },
   note: { fontSize: "10px", color: "#94a3b8", fontStyle: "italic", padding: "4px 0" },
-  subNav: { display: "flex", flexWrap: "wrap", gap: "2px", marginBottom: "8px", borderBottom: "1px solid #1e293b", paddingBottom: "8px" },
+  subNav: { display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px", borderBottom: "1px solid #1e293b", paddingBottom: "8px" },
   subTab: { padding: "3px 6px", border: "none", borderRadius: "3px", background: "transparent", color: "#64748b", cursor: "pointer", fontSize: "10px", fontFamily: "inherit", fontWeight: 600, transition: "all 0.15s" },
   subTabActive: { background: "#1e293b", color: "#e2e8f0 !important" },
   moonSection: { background: "#0a0f18", borderRadius: "6px", padding: "8px", border: "1px solid #1e293b30", boxShadow: "0 0 15px rgba(0,0,0,0.3)" },
