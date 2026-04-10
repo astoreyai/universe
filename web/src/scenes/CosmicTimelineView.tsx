@@ -64,6 +64,7 @@ function buildAgeLookup(): LookupEntry[] {
 }
 
 function ageToRedshift(table: LookupEntry[], ageGyr: number): number {
+  if (table.length === 0) return 0;
   if (ageGyr <= table[0].age) return table[0].z;
   if (ageGyr >= table[table.length - 1].age) return 0;
   let lo = 0,
@@ -496,10 +497,16 @@ function LightConeSurface() {
     }
 
     // Compute ring positions from engine
-    const rings = zSamples.map((z) => ({
-      y: cosmicTimeToY(engine.ageAtRedshiftGyr(z)),
-      r: comovingToSceneR(engine.comovingDistanceGly(z)),
-    }));
+    const rings = zSamples.map((z) => {
+      try {
+        return {
+          y: cosmicTimeToY(engine.ageAtRedshiftGyr(z)),
+          r: comovingToSceneR(engine.comovingDistanceGly(z)),
+        };
+      } catch {
+        return { y: 0, r: 0 };
+      }
+    });
 
     const vCount = (N_Z + 1) * (N_THETA + 1);
     const positions = new Float32Array(vCount * 3);
@@ -581,11 +588,16 @@ function MilestoneRings({ showLabels, epochAge }: { showLabels: boolean; epochAg
   const rings = useMemo(
     () =>
       MILESTONES.map((m) => {
-        const age = engine.ageAtRedshiftGyr(m.z);
-        const y = cosmicTimeToY(age);
-        const cDist = engine.comovingDistanceGly(m.z);
-        const r = comovingToSceneR(cDist);
-        return { ...m, y, r, age };
+        try {
+          const age = engine.ageAtRedshiftGyr(m.z);
+          const y = cosmicTimeToY(age);
+          const cDist = engine.comovingDistanceGly(m.z);
+          const r = comovingToSceneR(cDist);
+          return { ...m, y, r, age };
+        } catch {
+          const fallbackAge = m.z === 0 ? 13.8 : 0.001;
+          return { ...m, y: cosmicTimeToY(fallbackAge), r: 0, age: fallbackAge };
+        }
       }),
     []
   );
@@ -726,7 +738,8 @@ function CosmicTimeAxis() {
 
 function EpochSlicePlane({ epochAge, sliceZ }: { epochAge: number; sliceZ: number }) {
   const sliceY = cosmicTimeToY(epochAge);
-  const cDist = engine.comovingDistanceGly(sliceZ);
+  let cDist = 0;
+  try { cDist = engine.comovingDistanceGly(sliceZ); } catch { /* fallback 0 */ }
   const sliceR = comovingToSceneR(cDist);
 
   return (
@@ -869,21 +882,28 @@ function HubbleSphere({ epochAge, hubbleRadius }: { epochAge: number; hubbleRadi
     const profile: THREE.Vector2[] = [];
 
     for (let i = 0; i <= N; i++) {
-      const z = Math.pow(10, (i / N) * 3.04) - 1;
-      const age = engine.ageAtRedshiftGyr(Math.max(z, 0));
-      const y = cosmicTimeToY(age);
+      try {
+        const z = Math.pow(10, (i / N) * 3.04) - 1;
+        const age = engine.ageAtRedshiftGyr(Math.max(z, 0));
+        const y = cosmicTimeToY(age);
 
-      // Hubble sphere: d_H = c / H(z) in comoving coords: d_H_comoving = c / (a * H)
-      const hSI = engine.hubbleParameterKmSMpc(Math.max(z, 0.001)) * 1000 / 3.0857e22; // km/s/Mpc → s⁻¹
-      const C_M = 299792458;
-      const SECS_PER_YR = 365.25 * 86400;
-      const dComovingM = C_M / ((1 + Math.max(z, 0)) * hSI);
-      const dComovingGly = dComovingM / (C_M * SECS_PER_YR * 1e9);
-      const r = comovingToSceneR(dComovingGly);
+        // Hubble sphere: d_H = c / H(z) in comoving coords: d_H_comoving = c / (a * H)
+        const hSI = engine.hubbleParameterKmSMpc(Math.max(z, 0.001)) * 1000 / 3.0857e22; // km/s/Mpc → s⁻¹
+        const C_M = 299792458;
+        const SECS_PER_YR = 365.25 * 86400;
+        const dComovingM = C_M / ((1 + Math.max(z, 0)) * hSI);
+        const dComovingGly = dComovingM / (C_M * SECS_PER_YR * 1e9);
+        const r = comovingToSceneR(dComovingGly);
 
-      profile.push(new THREE.Vector2(r, y));
+        profile.push(new THREE.Vector2(r, y));
+      } catch {
+        // skip this sample on engine error
+      }
     }
 
+    if (profile.length < 2) {
+      profile.push(new THREE.Vector2(0, 0), new THREE.Vector2(0.01, 1));
+    }
     return new THREE.LatheGeometry(profile, 64);
   }, []);
 
@@ -954,9 +974,13 @@ function ObserverMarker() {
 
 function ObservableUniverseLabel() {
   const { y, r } = useMemo(() => {
-    const age = engine.ageAtRedshiftGyr(1100);
-    const cDist = engine.comovingDistanceGly(1100);
-    return { y: cosmicTimeToY(age), r: comovingToSceneR(cDist) };
+    try {
+      const age = engine.ageAtRedshiftGyr(1100);
+      const cDist = engine.comovingDistanceGly(1100);
+      return { y: cosmicTimeToY(age), r: comovingToSceneR(cDist) };
+    } catch {
+      return { y: 0, r: 0 };
+    }
   }, []);
 
   return (
