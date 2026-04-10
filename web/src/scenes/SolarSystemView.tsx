@@ -15,9 +15,9 @@ const PLANETS: [string, number, number, number, string, boolean, number, string]
   ["Mars", 1.524, 1.881, 3390, "#c1440e", false, 1.85, "mars.jpg"],
   ["Jupiter", 5.203, 11.86, 69911, "#c88b3a", false, 1.31, "jupiter.jpg"],
   ["Saturn", 9.537, 29.46, 58232, "#d4b87a", true, 2.49, "saturn.jpg"],
-  ["Uranus", 19.19, 84.01, 25362, "#73d4e0", false, 0.77, "venus.jpg"],
-  ["Neptune", 30.07, 164.8, 24622, "#3b5fc0", false, 1.77, "jupiter.jpg"],
-  ["Pluto", 39.48, 247.9, 1188, "#c8b898", false, 17.16, "mercury.jpg"],
+  ["Uranus", 19.19, 84.01, 25362, "#73d4e0", false, 0.77, "uranus.jpg"],
+  ["Neptune", 30.07, 164.8, 24622, "#3b5fc0", false, 1.77, "neptune.jpg"],
+  ["Pluto", 39.48, 247.9, 1188, "#c8b898", false, 17.16, "pluto.jpg"],
 ];
 
 // Major moons: [name, parentPlanet, orbitalRadius_km, radius_km, color, inclination_deg]
@@ -475,9 +475,7 @@ function Planet({ d, selected, hovered, refDf, showGrid, showMoons, timeSpeed, p
         onPointerLeave={() => onHover(null)}
       >
         <sphereGeometry args={[sz, 64, 64]} />
-        {d.name === "Uranus" || d.name === "Neptune" || d.name === "Pluto"
-          ? <meshBasicMaterial color={d.color} />
-          : <meshBasicMaterial map={tex} />}
+        <meshBasicMaterial map={tex} />
       </mesh>
 
       {/* Earth night lights layer */}
