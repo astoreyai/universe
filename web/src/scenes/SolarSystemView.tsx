@@ -295,7 +295,7 @@ export function SolarSystemView() {
                 <Row l="Diameter" v={`${(mRad * 2).toLocaleString()} km`} />
                 <Row l="Orbit radius" v={`${mOrbit.toLocaleString()} km`} />
                 <Row l="Inclination" v={`${mIncl.toFixed(2)}\u00B0`} />
-                <Row l="Orbit period" v={`${(Math.pow(mOrbit / 384400, 1.5) * 27.3).toFixed(1)} days`} />
+                <Row l="Orbit" v={`${(mOrbit / 1000).toFixed(1)}k km`} />
                 {getMoonFact(mName) && <div style={{ fontSize: "10px", color: "#64748b", marginTop: "4px", fontStyle: "italic" }}>{getMoonFact(mName)}</div>}
               </div>
               <button onClick={() => setSelectedMoon(null)} style={{ ...S.btn, marginTop: "6px", width: "100%", textAlign: "center" as const }}>

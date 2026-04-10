@@ -191,7 +191,7 @@ export function BlackHoleView() {
           ...styles.results,
           borderLeft: `3px solid ${dilation > 0.8 ? "#34d399" : dilation > 0.5 ? "#fbbf24" : "#ef4444"}`,
           transition: "box-shadow 0.3s ease",
-          boxShadow: resultFlash ? `0 0 20px ${dilation > 0.8 ? "#34d39960" : dilation > 0.5 ? "#fbbf2460" : "#ef444460"}` : "0 0 15px rgba(0,0,0,0.3)",
+          boxShadow: resultFlash ? `0 0 20px ${dilation > 0.8 ? "#34d39960" : dilation > 0.5 ? "#fbbf2460" : "#ef444460"}` : dilation < 0.3 ? "0 0 20px rgba(239,68,68,0.3)" : "0 0 15px rgba(0,0,0,0.3)",
         }}>
           <div style={styles.resultRow}>
             <span>d{"\u03C4"}/dt</span>
@@ -203,7 +203,7 @@ export function BlackHoleView() {
           </div>
           <div style={styles.resultRow}>
             <span>Time factor</span>
-            <span>
+            <span style={{ color: "#e2e8f0" }}>
               {dilation > 0.001
                 ? `${(1 / dilation).toFixed(2)}\u00D7 slower`
                 : "\u221E (frozen)"}
@@ -218,22 +218,22 @@ export function BlackHoleView() {
           {spin > 0 && (
             <div style={styles.resultRow}>
               <span>Ergosphere (eq.)</span>
-              <span>{((2 * gm) / C2 / 1000).toFixed(1)} km</span>
+              <span style={{ color: "#e2e8f0" }}>{((2 * gm) / C2 / 1000).toFixed(1)} km</span>
             </div>
           )}
           <details style={{ fontSize: "11px", color: "#94a3b8", cursor: "pointer" }}>
             <summary>Schwarzschild Details</summary>
             <div style={{ ...styles.resultRow, marginTop: "4px" }}>
               <span>Schwarzschild radius</span>
-              <span>{(rs / 1000).toFixed(1)} km</span>
+              <span style={{ color: "#e2e8f0" }}>{(rs / 1000).toFixed(1)} km</span>
             </div>
             <div style={styles.resultRow}>
               <span>Observer distance</span>
-              <span>{((observerR * rs) / 1000).toFixed(1)} km</span>
+              <span style={{ color: "#e2e8f0" }}>{((observerR * rs) / 1000).toFixed(1)} km</span>
             </div>
             <div style={styles.resultRow}>
               <span>Lost/year vs {"\u221E"}</span>
-              <span>{formatLarge(secondsLost)}</span>
+              <span style={{ color: "#e2e8f0" }}>{formatLarge(secondsLost)}</span>
             </div>
           </details>
         </div>
@@ -299,7 +299,7 @@ export function BlackHoleView() {
             {(() => {
               const dangerY = 110 - (Math.log10(0.1 + 0.001) + 3) / (Math.log10(1.001) + 3) * 100;
               return (
-                <rect x={30} y={dangerY} width={225} height={110 - dangerY} fill="#ef4444" opacity={0.08} />
+                <rect x={30} y={dangerY} width={225} height={110 - dangerY} fill="#ef4444" opacity={0.2} />
               );
             })()}
             {/* Curve — log scale Y */}
@@ -752,7 +752,7 @@ const styles: Record<string, React.CSSProperties> = {
   resultRow: {
     display: "flex",
     justifyContent: "space-between",
-    fontSize: "11px",
+    fontSize: "12px",
     color: "#94a3b8",
     fontVariantNumeric: "tabular-nums",
   },
