@@ -43,6 +43,10 @@ const pulseKeyframes = `
   0%, 100% { opacity: 0.9; }
   50% { opacity: 0.4; }
 }
+@keyframes float-body {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-2px); }
+}
 `;
 
 export function DilationTable() {
@@ -132,12 +136,13 @@ export function DilationTable() {
             <circle key={r} cx={300} cy={250} r={r} fill="none" stroke="#1e3a5f" strokeWidth={1} opacity={0.25} />
           ))}
 
-          {/* Title */}
+          {/* Title — compact with tooltip subtitle */}
           <text x={300} y={28} textAnchor="middle" fill="#94a3b8" fontSize={13} fontWeight={600} letterSpacing={2}>
-            GRAVITATIONAL TIME DILATION MAP
+            DILATION MAP
+            <title>Circle size = dilation severity (log scale) | Reference: {referenceBody}</title>
           </text>
           <text x={300} y={46} textAnchor="middle" fill="#94a3b8" fontSize={10}>
-            Circle size = dilation severity (log scale) | Reference: {referenceBody}
+            Reference: {referenceBody}
           </text>
 
           {/* Bodies arranged radially */}
@@ -159,10 +164,15 @@ export function DilationTable() {
 
             return (
               <g key={b.name}
+                data-body={b.name}
                 onPointerEnter={() => setHoveredBody(b.name)}
                 onPointerLeave={() => setHoveredBody(null)}
                 onClick={() => setReferenceBody(b.isExtreme ? referenceBody : b.name)}
-                style={{ cursor: b.isExtreme ? "not-allowed" : "pointer" }}
+                style={{
+                  cursor: b.isExtreme ? "not-allowed" : "pointer",
+                  animation: `float-body 2s ease-in-out infinite`,
+                  animationDelay: `${i * 0.3}s`,
+                }}
                 opacity={b.isExtreme ? 0.7 : 1}
               >
                 {/* Tooltip for extreme objects */}
@@ -210,6 +220,17 @@ export function DilationTable() {
               </g>
             );
           })}
+
+          {/* Hover connection line from center to hovered body */}
+          {hoveredBody && (() => {
+            const idx = chartBodies.findIndex(b => b.name === hoveredBody);
+            if (idx < 0) return null;
+            const angle = (idx / chartBodies.length) * Math.PI * 2 - Math.PI / 2;
+            const dist = 60 + idx * 18;
+            const bx = 300 + Math.cos(angle) * dist;
+            const by = 250 + Math.sin(angle) * dist;
+            return <line x1={300} y1={250} x2={bx} y2={by} stroke={chartBodies[idx].color} strokeWidth={1.5} opacity={0.5} strokeDasharray="4,3" style={{ transition: "all 0.2s ease" }} />;
+          })()}
 
           {/* Center label */}
           <text x={300} y={248} textAnchor="middle" fill="#94a3b8" fontSize={10}>flat</text>

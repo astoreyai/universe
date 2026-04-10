@@ -44,12 +44,22 @@ const TIER_LABELS = ["Earth Reference Refinements", "Gravity-Corrected", "Planet
 
 // ─── Main component ────────────────────────────────────────────────────────
 
+// ─── CSS for rotating dashed rings ──────────────────────────────────────
+const clockRingKeyframes = `
+@keyframes clock-ring-spin {
+  from { transform-origin: center center; transform: rotate(0deg); }
+  to { transform-origin: center center; transform: rotate(360deg); }
+}
+`;
+
 export function ClockDashboard() {
   const [time, setTime] = useState<TimeRepresentations | null>(null);
   const [mtcStr, setMtcStr] = useState("--:--:--");
   const [elapsed, setElapsed] = useState(0);
   const [selectedClock, setSelectedClock] = useState<string | null>(null);
   const [driftDuration, setDriftDuration] = useState(3600);
+  const [hoveredClock, setHoveredClock] = useState<string | null>(null);
+  const [showChain, setShowChain] = useState(false);
   const startRef = useRef(Date.now());
 
   useEffect(() => {
@@ -101,6 +111,7 @@ export function ClockDashboard() {
   return (
     <div style={styles.container} className="scene-layout">
       <div style={styles.vizSection} className="scene-canvas">
+        <style>{clockRingKeyframes}</style>
         <svg viewBox="0 0 640 580" style={{ width: "100%", height: "100%" }}>
           <defs>
             <radialGradient id="bg-grad" cx="50%" cy="50%" r="50%">
@@ -118,14 +129,20 @@ export function ClockDashboard() {
             Each clock ticks at its own rate {"\u2014"} click any clock for details
           </text>
 
-          {/* Relationship chain — moved here from bottom */}
-          <g opacity={0.8}>
-            <text x={320} y={55} textAnchor="middle" fill="#94a3b8" fontSize={10}>
-              UTC {"\u2192"} TAI (+37s) {"\u2192"} TT (+32.184s) {"\u2192"} TCG ({"\u00D7"}1+L_G) | TCB ({"\u00D7"}1+L_B)
-            </text>
-          </g>
-          <line x1={120} y1={59} x2={520} y2={59} stroke="#1e293b" strokeWidth={0.5} />
-          <text x={320} y={73} textAnchor="middle" fill="#34d399" fontSize={10} fontStyle="italic">Each tier corrects for gravity — higher tiers tick faster (less gravity)</text>
+          {/* Relationship chain — toggleable */}
+          <text x={320} y={55} textAnchor="middle" fill="#60a5fa" fontSize={10} style={{ cursor: "pointer", textDecoration: "underline" }}
+            onClick={() => setShowChain(!showChain)}>
+            {showChain ? "Hide" : "Show"} relationship chain
+          </text>
+          {showChain && (
+            <g opacity={0.8}>
+              <text x={320} y={68} textAnchor="middle" fill="#94a3b8" fontSize={10}>
+                UTC {"\u2192"} TAI (+37s) {"\u2192"} TT (+32.184s) {"\u2192"} TCG ({"\u00D7"}1+L_G) | TCB ({"\u00D7"}1+L_B)
+              </text>
+              <line x1={120} y1={72} x2={520} y2={72} stroke="#1e293b" strokeWidth={0.5} />
+              <text x={320} y={84} textAnchor="middle" fill="#34d399" fontSize={10} fontStyle="italic">Each tier corrects for gravity — higher tiers tick faster (less gravity)</text>
+            </g>
+          )}
 
           {/* Tiered clock layout */}
           {tierClocks.map((clocks, tierIdx) => {
@@ -159,10 +176,21 @@ export function ClockDashboard() {
                   const mx = cx + Math.sin((minuteAngle * Math.PI) / 180) * (r - 18);
                   const my = cy - Math.cos((minuteAngle * Math.PI) / 180) * (r - 18);
 
+                  const isHov = hoveredClock === c.key;
+
                   return (
-                    <g key={c.key} onClick={() => setSelectedClock(isSel ? null : c.key)} style={{ cursor: "pointer" }}>
+                    <g key={c.key} onClick={() => setSelectedClock(isSel ? null : c.key)}
+                      onPointerEnter={() => setHoveredClock(c.key)}
+                      onPointerLeave={() => setHoveredClock(null)}
+                      style={{ cursor: "pointer" }}>
+                      {/* Rotating dashed ring — always visible, subtle */}
+                      <circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={c.color} strokeWidth={0.8} opacity={0.2} strokeDasharray="6,4"
+                        style={{ animation: `clock-ring-spin ${20 + colIdx * 5}s linear infinite`, transformOrigin: `${cx}px ${cy}px` }} />
                       {isSel && <circle cx={cx} cy={cy} r={r + 6} fill="none" stroke={c.color} strokeWidth={2} opacity={0.3} strokeDasharray="4,4" />}
-                      <circle cx={cx} cy={cy} r={r} fill="rgba(15,23,42,0.5)" stroke={c.color} strokeWidth={isSel ? 2.5 : 1.5} opacity={isSel ? 0.8 : 0.4} />
+                      <circle cx={cx} cy={cy} r={r} fill="rgba(15,23,42,0.5)" stroke={c.color}
+                        strokeWidth={isHov ? 3 : (isSel ? 2.5 : 1.5)}
+                        opacity={isHov ? 0.7 : (isSel ? 0.8 : 0.4)}
+                        style={{ transition: "stroke-width 0.2s ease, opacity 0.2s ease" }} />
                       {Array.from({ length: 12 }).map((_, h) => {
                         const a = (h * 30 * Math.PI) / 180;
                         return <line key={h}

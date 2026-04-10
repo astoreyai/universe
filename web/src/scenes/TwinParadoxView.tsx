@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html, Stars as DreiStars, Line } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
@@ -25,6 +25,12 @@ export function TwinParadoxView() {
   const [speed, setSpeed] = useState(0.5);
   const [durationYears, setDurationYears] = useState(10);
   const [scenario, setScenario] = useState<Scenario>("custom");
+  const [flashColor, setFlashColor] = useState<string | null>(null);
+  const [showLearnMore, setShowLearnMore] = useState(false);
+
+  const PRESET_COLORS: Record<string, string> = {
+    gps: "#3b82f6", iss: "#06b6d4", proxima: "#22c55e", galactic: "#8b5cf6",
+  };
 
   const active = useMemo(() => {
     if (scenario === "custom") return { speed, years: durationYears };
@@ -68,7 +74,12 @@ export function TwinParadoxView() {
 
   return (
     <div style={styles.container} className="scene-layout" data-testid="twin-paradox-view">
-      <div style={styles.canvasWrapper} className="scene-canvas">
+      <div style={{
+        ...styles.canvasWrapper,
+        transition: "border-color 0.3s ease, box-shadow 0.3s ease",
+        borderColor: flashColor || "#1e293b",
+        boxShadow: flashColor ? `0 0 15px ${flashColor}40` : "none",
+      }} className="scene-canvas">
         <Canvas
           camera={{ position: [0, 4, 14], fov: 50 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
@@ -100,6 +111,11 @@ export function TwinParadoxView() {
                 if (key !== "custom") {
                   setSpeed(preset.speed);
                   setDurationYears(preset.years);
+                  const color = PRESET_COLORS[key];
+                  if (color) {
+                    setFlashColor(color);
+                    setTimeout(() => setFlashColor(null), 500);
+                  }
                 }
               }}
               style={{
@@ -193,18 +209,30 @@ export function TwinParadoxView() {
           <TimeBar label="Traveler" years={results.travelerAgingYears} max={results.coordTimeYears} color="#f59e0b" />
         </div>
 
-        {/* Formula */}
-        <div style={styles.formulaCard}>
-          <div style={styles.formulaTitle}>Formulas</div>
-          <div style={styles.formulaText}>
-            {"\u03B3"} = 1/{"\u221A"}(1 - v{"\u00B2"}/c{"\u00B2"}) | {"\u0394"}{"\u03C4"}_trav = {"\u0394"}t / {"\u03B3"} | L' = L / {"\u03B3"}
+        {/* Learn More — collapsible */}
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontSize: "11px", color: "#64748b", fontWeight: 600 }}
+            onClick={() => setShowLearnMore(!showLearnMore)}>
+            <span>Learn More</span>
+            <span style={{ fontSize: "10px" }}>{showLearnMore ? "\u25B2" : "\u25BC"}</span>
           </div>
-        </div>
+          {showLearnMore && (
+            <>
+              {/* Formula */}
+              <div style={{ ...styles.formulaCard, marginTop: "6px" }}>
+                <div style={styles.formulaTitle}>Formulas</div>
+                <div style={styles.formulaText}>
+                  {"\u03B3"} = 1/{"\u221A"}(1 - v{"\u00B2"}/c{"\u00B2"}) | {"\u0394"}{"\u03C4"}_trav = {"\u0394"}t / {"\u03B3"} | L' = L / {"\u03B3"}
+                </div>
+              </div>
 
-        {/* Why This Matters */}
-        <div style={styles.infoCard}>
-          <p style={{ margin: "0 0 6px 0" }}>The twin paradox is real — verified by flying atomic clocks on aircraft (Hafele-Keating, 1971) and by GPS satellite corrections every day. Astronaut Scott Kelly aged 5 milliseconds less than his twin Mark during 340 days on the ISS.</p>
-          <p style={{ margin: 0 }}>Note: This visualization assumes instantaneous turnaround. In reality, the traveling twin must accelerate to reverse direction — this acceleration breaks the symmetry and resolves the &apos;paradox.&apos; The twin who felt the g-forces is the one who ages less.</p>
+              {/* Why This Matters */}
+              <div style={{ ...styles.infoCard, marginTop: "6px" }}>
+                <p style={{ margin: "0 0 6px 0" }}>The twin paradox is real — verified by flying atomic clocks on aircraft (Hafele-Keating, 1971) and by GPS satellite corrections every day. Astronaut Scott Kelly aged 5 milliseconds less than his twin Mark during 340 days on the ISS.</p>
+                <p style={{ margin: 0 }}>Note: This visualization assumes instantaneous turnaround. In reality, the traveling twin must accelerate to reverse direction — this acceleration breaks the symmetry and resolves the &apos;paradox.&apos; The twin who felt the g-forces is the one who ages less.</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -241,8 +269,14 @@ function TwinScene({ beta, gamma }: { beta: number; gamma: number }) {
 // Earth twin — small blue sphere with label
 function EarthTwin({ gamma }: { gamma: number }) {
   const ref = useRef<THREE.Mesh>(null);
+  const atmoRef = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
     if (ref.current) ref.current.rotation.y = clock.getElapsedTime() * 0.2;
+    // Breathing glow on atmosphere
+    if (atmoRef.current) {
+      const mat = atmoRef.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = 0.06 + Math.sin(clock.getElapsedTime() * 1.5) * 0.03 + 0.03;
+    }
   });
 
   return (
@@ -251,8 +285,8 @@ function EarthTwin({ gamma }: { gamma: number }) {
         <sphereGeometry args={[0.9, 32, 32]} />
         <meshStandardMaterial color="#4a90d9" roughness={0.7} metalness={0.1} emissive="#4a90d9" emissiveIntensity={0.25} />
       </mesh>
-      {/* Atmosphere glow */}
-      <mesh>
+      {/* Atmosphere glow — breathing */}
+      <mesh ref={atmoRef}>
         <sphereGeometry args={[1.08, 32, 32]} />
         <meshBasicMaterial color="#60a5fa" transparent opacity={0.08} />
       </mesh>
