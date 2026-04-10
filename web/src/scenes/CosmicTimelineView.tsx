@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html, Stars as DreiStars } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
@@ -85,6 +85,32 @@ export function CosmicTimelineView() {
   const [showParticles, setShowParticles] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [panelFlashColor, setPanelFlashColor] = useState<string | null>(null);
+  const prevMilestoneRef = useRef<string | null>(null);
+
+  // Detect milestone crossings and flash panel border
+  useEffect(() => {
+    // Find closest milestone
+    const milestoneLookup = MILESTONES.map(m => {
+      try {
+        return { ...m, age: engine.ageAtRedshiftGyr(m.z) };
+      } catch {
+        return { ...m, age: m.z === 0 ? 13.8 : 0.001 };
+      }
+    });
+    const closest = milestoneLookup.reduce((best, curr) => {
+      const dist = Math.abs(curr.age - epochAge) / Math.max(curr.age, 0.001);
+      const bestDist = Math.abs(best.age - epochAge) / Math.max(best.age, 0.001);
+      return dist < bestDist ? curr : best;
+    });
+    const isNear = Math.abs(closest.age - epochAge) < 0.5;
+    const currentMs = isNear ? closest.label : null;
+    if (currentMs && currentMs !== prevMilestoneRef.current) {
+      setPanelFlashColor(closest.color);
+      setTimeout(() => setPanelFlashColor(null), 600);
+    }
+    prevMilestoneRef.current = currentMs;
+  }, [epochAge]);
 
   const ageLookup = useMemo(() => {
     try {
@@ -175,7 +201,12 @@ export function CosmicTimelineView() {
         </Canvas>
       </div>
 
-      <div style={styles.panel} className="scene-panel" data-testid="cosmic-panel">
+      <div style={{
+        ...styles.panel,
+        transition: "border-color 0.3s ease, box-shadow 0.3s ease",
+        borderColor: panelFlashColor || "#1e293b",
+        boxShadow: panelFlashColor ? `0 0 15px ${panelFlashColor}40` : "none",
+      }} className="scene-panel" data-testid="cosmic-panel">
         <div style={styles.panelTitle}>Cosmic Timeline</div>
 
         {/* Epoch description — prominent */}
@@ -367,17 +398,26 @@ export function CosmicTimelineView() {
           </table>
         </div>
 
-        {/* FLRW metric — collapsible with LCDM */}
+        {/* FLRW metric + Unit conversions — collapsible with LCDM */}
         {showAdvanced && (
-          <div style={styles.flrwCard}>
-            <div style={styles.flrwTitle}>FLRW Metric</div>
-            <div style={styles.flrwEq}>
-              ds{"\u00B2"} = -c{"\u00B2"}dt{"\u00B2"} + a(t){"\u00B2"}[dr{"\u00B2"} + r{"\u00B2"}d{"\u03A9"}{"\u00B2"}]
+          <>
+            <div style={styles.flrwCard}>
+              <div style={styles.flrwTitle}>FLRW Metric</div>
+              <div style={styles.flrwEq}>
+                ds{"\u00B2"} = -c{"\u00B2"}dt{"\u00B2"} + a(t){"\u00B2"}[dr{"\u00B2"} + r{"\u00B2"}d{"\u03A9"}{"\u00B2"}]
+              </div>
+              <div style={styles.flrwDetail}>
+                {"\u0394"}t_obs = (1+z) {"\u00D7"} {"\u0394"}t_emit | H(z) = H{"\u2080"}{"\u221A"}({"\u03A9"}_m(1+z){"\u00B3"} + {"\u03A9"}_{"\u039B"})
+              </div>
             </div>
-            <div style={styles.flrwDetail}>
-              {"\u0394"}t_obs = (1+z) {"\u00D7"} {"\u0394"}t_emit | H(z) = H{"\u2080"}{"\u221A"}({"\u03A9"}_m(1+z){"\u00B3"} + {"\u03A9"}_{"\u039B"})
+            <div style={styles.flrwCard}>
+              <div style={styles.flrwTitle}>Unit Conversions</div>
+              <div style={{ fontSize: "10px", color: "#94a3b8", lineHeight: "1.6", marginTop: "4px" }}>
+                <div>1 Gly = 1 billion light-years = 9.46 {"\u00D7"} 10{"\u00B2\u2074"} m</div>
+                <div>1 Gyr = 1 billion years = 3.156 {"\u00D7"} 10{"\u00B9\u2076"} s</div>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* Round 6 — Light cone color legend */}
@@ -397,15 +437,6 @@ export function CosmicTimelineView() {
               <rect x="0" y="3" width="120" height="10" rx="3" fill="url(#cone-legend-grad)" opacity="0.85" />
             </svg>
             <span style={{ fontSize: "10px", color: "#60a5fa", whiteSpace: "nowrap" }}>Present (z=0)</span>
-          </div>
-        </div>
-
-        {/* Round 10 — Age/distance conversion helper */}
-        <div style={styles.flrwCard}>
-          <div style={styles.flrwTitle}>Unit Conversions</div>
-          <div style={{ fontSize: "10px", color: "#94a3b8", lineHeight: "1.6", marginTop: "4px" }}>
-            <div>1 Gly = 1 billion light-years = 9.46 {"\u00D7"} 10{"\u00B2\u2074"} m</div>
-            <div>1 Gyr = 1 billion years = 3.156 {"\u00D7"} 10{"\u00B9\u2076"} s</div>
           </div>
         </div>
 
@@ -559,8 +590,15 @@ function MilestoneRings({ showLabels, epochAge }: { showLabels: boolean; epochAg
     []
   );
 
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y += 0.005;
+    }
+  });
+
   return (
-    <group>
+    <group ref={groupRef}>
       {rings.map((m) => {
         // Glow when epoch slider is near this milestone
         const proximity = Math.max(0, 1 - Math.abs(epochAge - m.age) / 1.5);

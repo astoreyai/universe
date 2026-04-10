@@ -106,6 +106,7 @@ export function SolarSystemView() {
   const [timeSpeed, setTimeSpeed] = useState(0.5);
   const [paused, setPaused] = useState(false);
   const [detailView, setDetailView] = useState<string | null>(null); // null = system overview, planet name = detail
+  const [showControls, setShowControls] = useState(true);
   const planetPositions = useRef<Record<string, THREE.Vector3>>({});
 
   // Escape key unfocuses
@@ -153,7 +154,7 @@ export function SolarSystemView() {
           ))}
 
           {showOrbits && planets.map((p) => (
-            <OrbitRing key={`o-${p.name}`} r={p.au * AU} incl={p.incl} active={selected === p.name} />
+            <OrbitRing key={`o-${p.name}`} r={p.au * AU} incl={p.incl} active={selected === p.name} hovered={hovered === p.name} />
           ))}
 
           {/* Round 8 — Orbit trails for all planets */}
@@ -214,7 +215,11 @@ export function SolarSystemView() {
             <div style={S.panelHdr}>Solar System Overview</div>
             <div style={S.btns}>
               {["Sun", ...planets.map((p) => p.name)].map((n) => (
-                <button key={n} onClick={() => { setSelected(n); setDetailView(n); }} style={{ ...S.btn, ...(selected === n ? S.btnA : {}) }}>{n}</button>
+                <button key={n}
+                  onClick={() => { setSelected(n); setDetailView(n); }}
+                  onMouseEnter={() => setHovered(n)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{ ...S.btn, ...(selected === n ? S.btnA : {}) }}>{n}</button>
               ))}
             </div>
           </>
@@ -333,37 +338,48 @@ export function SolarSystemView() {
           })}
         </div>
 
-        <div style={S.speedControl}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "10px", color: "#64748b" }}>Speed: {timeSpeed.toFixed(1)}x</span>
-            <button onClick={() => setPaused(!paused)} style={S.pauseBtn}>{paused ? "\u25B6" : "\u23F8"}</button>
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontSize: "11px", color: "#64748b", fontWeight: 600 }}
+            onClick={() => setShowControls(!showControls)}>
+            <span>Controls</span>
+            <span style={{ fontSize: "10px" }}>{showControls ? "\u25B2" : "\u25BC"}</span>
           </div>
-          <input type="range" min="0.1" max="5" step="0.1" value={timeSpeed}
-            onChange={(e) => setTimeSpeed(parseFloat(e.target.value))} style={{ width: "100%", accentColor: "#3b82f6" }} />
-          <div style={{ fontSize: "9px", color: "#475569", textAlign: "center" as const }}>
-            1 second {"\u2248"} {Math.round(timeSpeed * 365.25)} days
-          </div>
-        </div>
+          {showControls && (
+            <>
+              <div style={{ ...S.speedControl, marginTop: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "10px", color: "#64748b" }}>Speed: {timeSpeed.toFixed(1)}x</span>
+                  <button onClick={() => setPaused(!paused)} style={S.pauseBtn}>{paused ? "\u25B6" : "\u23F8"}</button>
+                </div>
+                <input type="range" min="0.1" max="5" step="0.1" value={timeSpeed}
+                  onChange={(e) => setTimeSpeed(parseFloat(e.target.value))} style={{ width: "100%", accentColor: "#3b82f6" }} />
+                <div style={{ fontSize: "9px", color: "#475569", textAlign: "center" as const }}>
+                  1 second {"\u2248"} {Math.round(timeSpeed * 365.25)} days
+                </div>
+              </div>
 
-        <div style={S.toggles}>
-          <label style={S.toggle}>
-            <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
-            <span>Time Zone Grid</span>
-          </label>
-          <label style={S.toggle}>
-            <input type="checkbox" checked={showMoons} onChange={(e) => setShowMoons(e.target.checked)} />
-            <span>Moons</span>
-          </label>
-          <label style={S.toggle}>
-            <input type="checkbox" checked={showOrbits} onChange={(e) => setShowOrbits(e.target.checked)} />
-            <span>Orbital Planes</span>
-          </label>
-        </div>
+              <div style={{ ...S.toggles, marginTop: "6px" }}>
+                <label style={S.toggle}>
+                  <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
+                  <span>Time Zone Grid</span>
+                </label>
+                <label style={S.toggle}>
+                  <input type="checkbox" checked={showMoons} onChange={(e) => setShowMoons(e.target.checked)} />
+                  <span>Moons</span>
+                </label>
+                <label style={S.toggle}>
+                  <input type="checkbox" checked={showOrbits} onChange={(e) => setShowOrbits(e.target.checked)} />
+                  <span>Orbital Planes</span>
+                </label>
+              </div>
 
-        <div style={S.note}>
-          Asteroid belt: 2.1{"\u2013"}3.3 AU between Mars and Jupiter
-          <br />
-          Kuiper belt: 30{"\u2013"}50 AU beyond Neptune
+              <div style={{ ...S.note, marginTop: "6px" }}>
+                Asteroid belt: 2.1{"\u2013"}3.3 AU between Mars and Jupiter
+                <br />
+                Kuiper belt: 30{"\u2013"}50 AU beyond Neptune
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -377,9 +393,14 @@ function Sun({ selected, onClick, onHover }: { selected: boolean; onClick: () =>
   const glowRef = useRef<THREE.Mesh>(null);
   const sunTex = useLoader(THREE.TextureLoader, `${BASE}textures/sun.jpg`);
 
-  useFrame((_, dt) => {
+  useFrame(({ clock }, dt) => {
     if (ref.current) ref.current.rotation.y += dt * 0.05;
-    if (glowRef.current) glowRef.current.rotation.z += dt * 0.02;
+    if (glowRef.current) {
+      glowRef.current.rotation.z += dt * 0.02;
+      // Subtle pulsing scale on the outer glow
+      const pulse = 1.0 + Math.sin(clock.getElapsedTime() * (Math.PI * 2 / 3)) * 0.05;
+      glowRef.current.scale.setScalar(pulse);
+    }
   });
 
   return (
@@ -609,7 +630,7 @@ function MoonBody({ name, orbitR, radius, color, parentR, inclination, onClick }
 
 // ─── Orbit Ring with inclination ───────────────────────────────────────────
 
-function OrbitRing({ r, incl, active }: { r: number; incl: number; active: boolean }) {
+function OrbitRing({ r, incl, active, hovered }: { r: number; incl: number; active: boolean; hovered?: boolean }) {
   const inclRad = (incl * Math.PI) / 180;
   const pts = useMemo(() => {
     const p: THREE.Vector3[] = [];
@@ -623,7 +644,8 @@ function OrbitRing({ r, incl, active }: { r: number; incl: number; active: boole
     return p;
   }, [r, inclRad]);
 
-  return <Line points={pts} color={active ? "#60a5fa" : "#1e293b"} lineWidth={active ? 1.2 : 0.4} transparent opacity={active ? 0.5 : 0.15} />;
+  const isHighlighted = active || hovered;
+  return <Line points={pts} color={isHighlighted ? "#60a5fa" : "#1e293b"} lineWidth={hovered ? 1.8 : (active ? 1.2 : 0.4)} transparent opacity={hovered ? 0.7 : (active ? 0.5 : 0.15)} />;
 }
 
 // ─── Asteroid Belt ─────────────────────────────────────────────────────────

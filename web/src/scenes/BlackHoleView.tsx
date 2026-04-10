@@ -81,6 +81,8 @@ export function BlackHoleView() {
   const [mass, setMass] = useState(10); // solar masses
   const [spin, setSpin] = useState(0.0); // dimensionless spin a*
   const [observerR, setObserverR] = useState(6); // in units of rs
+  const [resultFlash, setResultFlash] = useState(false);
+  const [showLearnMore, setShowLearnMore] = useState(false);
 
   const gmSun = engine.constants.gmSun();
   const gm = mass * gmSun;
@@ -178,10 +180,19 @@ export function BlackHoleView() {
           max={20}
           step={0.1}
           value={observerR}
-          onChange={setObserverR}
+          onChange={(v) => {
+            setObserverR(v);
+            setResultFlash(true);
+            setTimeout(() => setResultFlash(false), 300);
+          }}
         />
 
-        <div style={{ ...styles.results, borderLeft: `3px solid ${dilation > 0.8 ? "#34d399" : dilation > 0.5 ? "#fbbf24" : "#ef4444"}` }}>
+        <div style={{
+          ...styles.results,
+          borderLeft: `3px solid ${dilation > 0.8 ? "#34d399" : dilation > 0.5 ? "#fbbf24" : "#ef4444"}`,
+          transition: "box-shadow 0.3s ease",
+          boxShadow: resultFlash ? `0 0 20px ${dilation > 0.8 ? "#34d39960" : dilation > 0.5 ? "#fbbf2460" : "#ef444460"}` : "0 0 15px rgba(0,0,0,0.3)",
+        }}>
           <div style={styles.resultRow}>
             <span>d{"\u03C4"}/dt</span>
             <span
@@ -227,20 +238,32 @@ export function BlackHoleView() {
           </details>
         </div>
 
-        {/* Formula card */}
-        <div style={styles.formulaCard}>
-          <div style={styles.formulaTitle}>Formulas</div>
-          <div style={styles.formulaText}>
-            d{"\u03C4"}/dt = {"\u221A"}(1 - r{"\u209b"}/r)
+        {/* Learn More — collapsible */}
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontSize: "11px", color: "#64748b", fontWeight: 600 }}
+            onClick={() => setShowLearnMore(!showLearnMore)}>
+            <span>Learn More</span>
+            <span style={{ fontSize: "10px" }}>{showLearnMore ? "\u25B2" : "\u25BC"}</span>
           </div>
-          <div style={{ ...styles.formulaText, marginTop: "4px", fontSize: "10px", color: "#64748b" }}>
-            r{"\u209b"} = 2GM/c{"\u00B2"}
-          </div>
-        </div>
+          {showLearnMore && (
+            <>
+              {/* Formula card */}
+              <div style={{ ...styles.formulaCard, marginTop: "6px" }}>
+                <div style={styles.formulaTitle}>Formulas</div>
+                <div style={styles.formulaText}>
+                  d{"\u03C4"}/dt = {"\u221A"}(1 - r{"\u209b"}/r)
+                </div>
+                <div style={{ ...styles.formulaText, marginTop: "4px", fontSize: "10px", color: "#64748b" }}>
+                  r{"\u209b"} = 2GM/c{"\u00B2"}
+                </div>
+              </div>
 
-        {/* Why This Matters */}
-        <div style={styles.infoCard}>
-          The closer to the event horizon, the slower time moves. At dilation = 0.1 (extreme zone), 1 second for you = 10 seconds for a distant observer. Accretion disks shine because matter spirals inward through this extreme dilation, converting gravitational energy to radiation — powering quasars visible across billions of light-years.
+              {/* Why This Matters */}
+              <div style={{ ...styles.infoCard, marginTop: "6px" }}>
+                The closer to the event horizon, the slower time moves. At dilation = 0.1 (extreme zone), 1 second for you = 10 seconds for a distant observer. Accretion disks shine because matter spirals inward through this extreme dilation, converting gravitational energy to radiation — powering quasars visible across billions of light-years.
+              </div>
+            </>
+          )}
         </div>
 
         <div style={styles.profileSection}>
@@ -372,6 +395,7 @@ function BlackHoleScene({
 }) {
   const accretionRef = useRef<THREE.Group>(null);
   const observerRef = useRef<THREE.Group>(null);
+  const horizonRef = useRef<THREE.Mesh>(null);
 
   // Scale: 1 unit = 1 rs
   const SCALE = 1;
@@ -380,6 +404,10 @@ function BlackHoleScene({
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
+    // Slowly rotate event horizon for visual life
+    if (horizonRef.current) {
+      horizonRef.current.rotation.y += 0.01;
+    }
     // Each ring rotates at Keplerian speed: v ∝ r^(-1/2), so ω ∝ r^(-3/2)
     ringRefs.current.forEach((mesh, i) => {
       if (mesh) {
@@ -411,8 +439,8 @@ function BlackHoleScene({
         <sphereGeometry args={[SCALE, 64, 64]} />
         <meshBasicMaterial color="#000000" />
       </mesh>
-      {/* Inner depth sphere for visual depth */}
-      <mesh>
+      {/* Inner depth sphere for visual depth — slowly rotates */}
+      <mesh ref={horizonRef}>
         <sphereGeometry args={[0.95, 64, 64]} />
         <meshBasicMaterial color="#000008" />
       </mesh>
