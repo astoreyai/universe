@@ -157,7 +157,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "12px",
     letterSpacing: "0.5px",
     fontFamily: "inherit",
-    transition: "all 0.2s",
+    transition: "all 0.2s ease",
   },
   tabActive: {
     background: "#1e293b",

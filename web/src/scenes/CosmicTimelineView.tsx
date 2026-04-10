@@ -581,7 +581,7 @@ function LightConeSurface() {
       {/* Wireframe overlay */}
       <lineSegments>
         <wireframeGeometry args={[geometry]} />
-        <lineBasicMaterial color="#60a5fa" transparent opacity={0.1} />
+        <lineBasicMaterial color="#60a5fa" transparent opacity={0.12} />
       </lineSegments>
     </group>
   );
@@ -620,7 +620,7 @@ function MilestoneRings({ showLabels, epochAge }: { showLabels: boolean; epochAg
         // Glow when epoch slider is near this milestone
         const proximity = Math.max(0, 1 - Math.abs(epochAge - m.age) / 1.5);
         const ringWidth = 0.08 + proximity * 0.06;
-        const ringOpacity = 0.6 + proximity * 0.5;
+        const ringOpacity = Math.max(0.5, 0.6 + proximity * 0.5);
         return (
         <group key={m.z}>
           <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, m.y, 0]}>

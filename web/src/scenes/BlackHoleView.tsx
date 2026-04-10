@@ -412,7 +412,7 @@ function BlackHoleScene({
     ringRefs.current.forEach((mesh, i) => {
       if (mesh) {
         const r = 1.5 + i * 0.5;
-        const omega = 0.8 / Math.pow(r, 1.5); // Kepler
+        const omega = 1.5 / Math.pow(r, 1.5); // Kepler
         mesh.rotation.z = t * omega;
       }
     });

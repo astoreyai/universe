@@ -230,11 +230,11 @@ function SpacetimeFabric({ bodies, referenceBody, hoveredBody, onHover, onSelect
     <group>
       {/* Wireframe spacetime grid */}
       <mesh ref={gridRef} geometry={geometry}>
-        <meshBasicMaterial color="#1e3a5f" wireframe transparent opacity={0.3} />
+        <meshBasicMaterial color="#2a4a6f" wireframe transparent opacity={0.3} />
       </mesh>
       {/* Solid surface underneath for depth perception */}
       <mesh geometry={geometry}>
-        <meshStandardMaterial color="#0a1628" transparent opacity={0.6} side={THREE.DoubleSide} roughness={0.8} metalness={0.2} />
+        <meshBasicMaterial color="#0a1628" transparent opacity={0.6} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Bodies sitting in their wells */}
