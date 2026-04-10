@@ -123,6 +123,9 @@ export function DilationTable() {
       <div style={styles.panel} className="scene-panel">
         <div style={styles.panelTitle}>Curved Spacetime</div>
         <div style={styles.subtitle}>Gravity bends spacetime — deeper wells = slower clocks</div>
+        <div style={{ fontSize: "9px", color: "#64748b", lineHeight: 1.4, marginTop: "-4px" }}>
+          The grid shows spacetime fabric {"\u2014"} mass curves it downward, creating gravity wells where clocks tick slower.
+        </div>
 
         <div style={styles.whyCard}>
           <div style={styles.whyTitle}>Why This Matters</div>

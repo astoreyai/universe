@@ -129,9 +129,13 @@ export function TwinParadoxView() {
         </div>
 
         {/* Round 10 — Scenario description */}
-        {scenario !== "custom" && (
+        {scenario !== "custom" ? (
           <div style={{ fontSize: "10px", color: "#64748b", fontStyle: "italic", padding: "0 2px", marginTop: "-6px" }}>
             {PRESETS[scenario].description}
+          </div>
+        ) : (
+          <div style={{ fontSize: "10px", color: "#64748b", fontStyle: "italic", padding: "0 2px", marginTop: "-6px" }}>
+            Custom scenario: {(active.speed * 100).toFixed(2)}% of light speed for {active.years} years
           </div>
         )}
 

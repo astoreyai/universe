@@ -309,7 +309,7 @@ export function CosmicTimelineView() {
             style={{ ...styles.paramTitle, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
             onClick={() => setShowAdvanced(!showAdvanced)}
           >
-            <span>{"\u039B"}CDM Parameters & FLRW</span>
+            <span>Advanced: {"\u039B"}CDM Cosmology</span>
             <span style={{ fontSize: "10px", color: "#64748b" }}>{showAdvanced ? "\u25B2" : "\u25BC"}</span>
           </div>
           {showAdvanced && (

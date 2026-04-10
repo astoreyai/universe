@@ -59,7 +59,6 @@ export function ClockDashboard() {
   const [selectedClock, setSelectedClock] = useState<string | null>(null);
   const [driftDuration, setDriftDuration] = useState(3600);
   const [hoveredClock, setHoveredClock] = useState<string | null>(null);
-  const [showChain, setShowChain] = useState(false);
   const startRef = useRef(Date.now());
 
   useEffect(() => {
@@ -129,20 +128,14 @@ export function ClockDashboard() {
             Each clock ticks at its own rate {"\u2014"} click any clock for details
           </text>
 
-          {/* Relationship chain — toggleable */}
-          <text x={320} y={55} textAnchor="middle" fill="#60a5fa" fontSize={10} style={{ cursor: "pointer", textDecoration: "underline" }}
-            onClick={() => setShowChain(!showChain)}>
-            {showChain ? "Hide" : "Show"} relationship chain
-          </text>
-          {showChain && (
-            <g opacity={0.8}>
-              <text x={320} y={68} textAnchor="middle" fill="#94a3b8" fontSize={10}>
-                UTC {"\u2192"} TAI (+37s) {"\u2192"} TT (+32.184s) {"\u2192"} TCG ({"\u00D7"}1+L_G) | TCB ({"\u00D7"}1+L_B)
-              </text>
-              <line x1={120} y1={72} x2={520} y2={72} stroke="#1e293b" strokeWidth={0.5} />
-              <text x={320} y={84} textAnchor="middle" fill="#34d399" fontSize={10} fontStyle="italic">Each tier corrects for gravity — higher tiers tick faster (less gravity)</text>
-            </g>
-          )}
+          {/* Relationship chain — always visible for context */}
+          <g opacity={0.8}>
+            <text x={320} y={58} textAnchor="middle" fill="#94a3b8" fontSize={10}>
+              UTC {"\u2192"} TAI (+37s) {"\u2192"} TT (+32.184s) {"\u2192"} TCG ({"\u00D7"}1+L_G) | TCB ({"\u00D7"}1+L_B)
+            </text>
+            <line x1={120} y1={62} x2={520} y2={62} stroke="#1e293b" strokeWidth={0.5} />
+            <text x={320} y={74} textAnchor="middle" fill="#34d399" fontSize={10} fontStyle="italic">Each tier corrects for gravity — higher tiers tick faster (less gravity)</text>
+          </g>
 
           {/* Tiered clock layout */}
           {tierClocks.map((clocks, tierIdx) => {
