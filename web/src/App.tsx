@@ -68,7 +68,8 @@ export function App() {
       <div style={styles.container}>
         <div style={styles.loading}>
           <div style={styles.title}>UNIVERSE CLOCK</div>
-          <div style={styles.subtitle}>Initializing physics engine...</div>
+          <div style={{ ...styles.subtitle, animation: "pulse 2s ease-in-out infinite" }}>Initializing physics engine...</div>
+          <style>{`@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
         </div>
       </div>
     );
@@ -126,13 +127,14 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "14px 20px 6px",
   },
   title: {
-    fontSize: "24px",
-    fontWeight: 700,
-    letterSpacing: "6px",
-    background: "linear-gradient(90deg, #3b82f6 0%, #60a5fa 20%, #a78bfa 50%, #60a5fa 80%, #3b82f6 100%)",
+    fontSize: "26px",
+    fontWeight: 800,
+    letterSpacing: "8px",
+    background: "linear-gradient(90deg, #3b82f6 0%, #60a5fa 15%, #a78bfa 35%, #c084fc 50%, #a78bfa 65%, #60a5fa 85%, #3b82f6 100%)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
     marginBottom: "2px",
+    textShadow: "0 0 40px rgba(96,165,250,0.15)",
   },
   subtitle: {
     fontSize: "11px",
