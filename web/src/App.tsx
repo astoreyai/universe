@@ -1,8 +1,9 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { initEngine, engine } from "./engine/wasm-bridge";
-import { DilationTable } from "./components/DilationTable";
-
 import { ClockDashboard } from "./components/ClockDashboard";
+const DilationTable = lazy(() =>
+  import("./components/DilationTable").then((m) => ({ default: m.DilationTable }))
+);
 const SolarSystemView = lazy(() =>
   import("./scenes/SolarSystemView").then((m) => ({ default: m.SolarSystemView }))
 );
@@ -99,9 +100,9 @@ export function App() {
       </nav>
 
       <main style={styles.main}>
-        {activeTab === "dilation" && <DilationTable />}
         {activeTab === "clocks" && <ClockDashboard />}
         <Suspense fallback={<div style={styles.loading}><div style={styles.subtitle}>Loading 3D scene...</div></div>}>
+          {activeTab === "dilation" && <DilationTable />}
           {activeTab === "solar" && <SolarSystemView />}
           {activeTab === "blackhole" && <BlackHoleView />}
           {activeTab === "twins" && <TwinParadoxView />}
