@@ -144,7 +144,7 @@ export function TwinParadoxView() {
             <span style={styles.sliderValue}>{results.speedKmS.toFixed(1)} km/s</span>
           </div>
           <input
-            type="range" min={0.0001} max={0.9999} step={0.0001}
+            type="range" min={0.0001} max={0.9999} step={0.001}
             value={active.speed}
             onChange={(e) => { setScenario("custom"); setSpeed(parseFloat(e.target.value)); }}
             style={styles.sliderInput}
@@ -158,7 +158,7 @@ export function TwinParadoxView() {
             <span style={styles.sliderValue}>{active.years.toFixed(1)} years</span>
           </div>
           <input
-            type="range" min={0.1} max={1000} step={0.1}
+            type="range" min={0.1} max={1000} step={1}
             value={active.years}
             onChange={(e) => { setScenario("custom"); setDurationYears(parseFloat(e.target.value)); }}
             style={styles.sliderInput}
@@ -185,11 +185,11 @@ export function TwinParadoxView() {
           </div>
           <div style={styles.resultRow}>
             <span>Distance (coord)</span>
-            <span>{results.distanceLy.toFixed(2)} ly</span>
+            <span style={{ color: "#e2e8f0" }}>{results.distanceLy.toFixed(2)} ly</span>
           </div>
           <div style={styles.resultRow}>
             <span>Distance (traveler)</span>
-            <span>{results.contractedLy.toFixed(2)} ly</span>
+            <span style={{ color: "#e2e8f0" }}>{results.contractedLy.toFixed(2)} ly</span>
           </div>
         </div>
 
@@ -791,7 +791,7 @@ const styles: Record<string, React.CSSProperties> = {
   resultRow: {
     display: "flex",
     justifyContent: "space-between",
-    fontSize: "11px",
+    fontSize: "12px",
     color: "#94a3b8",
     fontVariantNumeric: "tabular-nums",
   },

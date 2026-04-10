@@ -256,7 +256,12 @@ export function CosmicTimelineView() {
             Slider uses log scale — small movements near Big Bang span huge time periods, near Now they show fine detail.
           </div>
           <div style={{ marginTop: "6px" }}>
-            <div style={{ width: (1 / (1 + sliceZ)) * 100 + "%", height: "4px", background: "#f59e0b", borderRadius: "2px", transition: "width 0.3s" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <div style={{ flex: 1, height: "4px", background: "#1e293b", borderRadius: "2px", overflow: "hidden" }}>
+                <div style={{ width: Math.max((1 / (1 + sliceZ)) * 100, 1) + "%", height: "100%", background: "#f59e0b", borderRadius: "2px", transition: "width 0.3s" }} />
+              </div>
+              <span style={{ fontSize: "10px", color: "#f59e0b", fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{((1 / (1 + sliceZ)) * 100).toFixed(1)}%</span>
+            </div>
             <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px" }}>
               Scale factor a = {sliceData.a.toFixed(4)} — universe was {((1 / (1 + sliceZ)) * 100).toFixed(1)}% of current size
             </div>
@@ -271,27 +276,27 @@ export function CosmicTimelineView() {
           </div>
           <div style={styles.resultRow}>
             <span>Scale factor a</span>
-            <span>{sliceData.a.toFixed(4)}</span>
+            <span style={{ color: "#e2e8f0" }}>{sliceData.a.toFixed(4)}</span>
           </div>
           <div style={styles.resultRow}>
             <span>Cosmic age</span>
-            <span>{sliceData.age.toFixed(2)} Gyr</span>
+            <span style={{ color: "#e2e8f0" }}>{sliceData.age.toFixed(2)} Gyr</span>
           </div>
           <div style={styles.resultRow}>
             <span>H(z)</span>
-            <span>{sliceData.hubble.toFixed(1)} km/s/Mpc</span>
+            <span style={{ color: "#e2e8f0" }}>{sliceData.hubble.toFixed(1)} km/s/Mpc</span>
           </div>
           <div style={styles.resultRow}>
             <span>Comoving radius</span>
-            <span>{sliceData.comoving.toFixed(2)} Gly</span>
+            <span style={{ color: "#e2e8f0" }}>{sliceData.comoving.toFixed(2)} Gly</span>
           </div>
           <div style={styles.resultRow}>
             <span>Time dilation</span>
-            <span>{sliceData.dilation.toFixed(2)}{"\u00D7"}</span>
+            <span style={{ color: "#e2e8f0" }}>{sliceData.dilation.toFixed(2)}{"\u00D7"}</span>
           </div>
           <div style={styles.resultRow}>
             <span>Lookback time</span>
-            <span>{sliceData.lookback.toFixed(2)} Gyr</span>
+            <span style={{ color: "#e2e8f0" }}>{sliceData.lookback.toFixed(2)} Gyr</span>
           </div>
         </div>
 
@@ -1084,7 +1089,7 @@ const styles: Record<string, React.CSSProperties> = {
   resultRow: {
     display: "flex",
     justifyContent: "space-between",
-    fontSize: "11px",
+    fontSize: "12px",
     color: "#94a3b8",
     fontVariantNumeric: "tabular-nums",
   },
