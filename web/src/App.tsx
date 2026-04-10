@@ -84,23 +84,27 @@ export function App() {
         </p>
       </header>
 
-      <nav style={styles.nav}>
-        {(Object.keys(TAB_LABELS) as Tab[]).map((tab, i) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            title={`${TAB_LABELS[tab]} (press ${i + 1})`}
-            style={{
-              ...styles.tab,
-              ...(activeTab === tab ? styles.tabActive : {}),
-            }}
-          >
-            <span style={styles.tabKey}>{i + 1}</span> {TAB_LABELS[tab]}
-          </button>
-        ))}
+      <nav style={styles.nav} aria-label="Main navigation">
+        <div style={styles.tabList} role="tablist" aria-label="View selector">
+          {(Object.keys(TAB_LABELS) as Tab[]).map((tab, i) => (
+            <button
+              key={tab}
+              role="tab"
+              aria-selected={activeTab === tab}
+              onClick={() => setActiveTab(tab)}
+              title={`${TAB_LABELS[tab]} (press ${i + 1})`}
+              style={{
+                ...styles.tab,
+                ...(activeTab === tab ? styles.tabActive : {}),
+              }}
+            >
+              <span style={styles.tabKey}>{i + 1}</span> {TAB_LABELS[tab]}
+            </button>
+          ))}
+        </div>
       </nav>
 
-      <main style={styles.main}>
+      <main style={styles.main} role="tabpanel" aria-label={TAB_LABELS[activeTab]}>
         {activeTab === "clocks" && <ClockDashboard />}
         <Suspense fallback={<div style={styles.loading}><div style={styles.subtitle}>Loading 3D scene...</div></div>}>
           {activeTab === "dilation" && <DilationTable />}
@@ -145,8 +149,12 @@ const styles: Record<string, React.CSSProperties> = {
   nav: {
     display: "flex",
     justifyContent: "center",
-    gap: "4px",
     padding: "8px 20px",
+  },
+  tabList: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "4px",
     flexWrap: "wrap",
   },
   tab: {
