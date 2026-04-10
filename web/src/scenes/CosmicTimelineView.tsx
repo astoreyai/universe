@@ -129,7 +129,8 @@ export function CosmicTimelineView() {
     }
   }, []);
 
-  const sliceZ = useMemo(() => ageToRedshift(ageLookup, epochAge), [ageLookup, epochAge]);
+  const sliceZRaw = useMemo(() => ageToRedshift(ageLookup, epochAge), [ageLookup, epochAge]);
+  const sliceZ = isNaN(sliceZRaw) || !isFinite(sliceZRaw) ? 0 : sliceZRaw;
   const sliceData = useMemo(
     () => {
       const s = (fn: () => number, fallback = 0) => {

@@ -240,23 +240,30 @@ export function TwinParadoxView() {
             <text x={104} y={185} fill="#4a90d9" fontSize={8}>Earth</text>
 
             {/* Traveler worldline — angled outbound then return */}
-            <polyline
-              points={`100,190 ${100 + active.speed * 80},100 100,10`}
-              fill="none" stroke="#f59e0b" strokeWidth={2}
-            />
-            <text x={100 + active.speed * 40 + 3} y={145} fill="#f59e0b" fontSize={8}>Traveler</text>
+            {(() => {
+              const travelX = isNaN(active.speed) ? 40 : active.speed * 80;
+              return (
+                <>
+                  <polyline
+                    points={`100,190 ${100 + travelX},100 100,10`}
+                    fill="none" stroke="#f59e0b" strokeWidth={2}
+                  />
+                  <text x={100 + travelX / 2 + 3} y={145} fill="#f59e0b" fontSize={8}>Traveler</text>
 
-            {/* Proper time labels */}
-            <text x={85} y={100} fill="#4a90d9" fontSize={7} textAnchor="end">
-              {results.earthAgingYears.toFixed(1)} yr
-            </text>
-            <text x={100 + active.speed * 80 + 3} y={100} fill="#f59e0b" fontSize={7}>
-              {results.travelerAgingYears.toFixed(1)} yr
-            </text>
+                  {/* Proper time labels */}
+                  <text x={85} y={100} fill="#4a90d9" fontSize={7} textAnchor="end">
+                    {results.earthAgingYears.toFixed(1)} yr
+                  </text>
+                  <text x={100 + travelX + 3} y={100} fill="#f59e0b" fontSize={7}>
+                    {results.travelerAgingYears.toFixed(1)} yr
+                  </text>
 
-            {/* Turnaround point */}
-            <circle cx={100 + active.speed * 80} cy={100} r={3} fill="#ef4444" />
-            <text x={100 + active.speed * 80 + 5} y={97} fill="#ef4444" fontSize={7}>turnaround</text>
+                  {/* Turnaround point */}
+                  <circle cx={100 + travelX} cy={100} r={3} fill="#ef4444" />
+                  <text x={100 + travelX + 5} y={97} fill="#ef4444" fontSize={7}>turnaround</text>
+                </>
+              );
+            })()}
           </svg>
           <div style={{ fontSize: "9px", color: "#64748b", marginTop: "4px", fontStyle: "italic" }}>
             The traveler's path through spacetime is SHORTER (fewer ticks) than Earth's straight worldline. Shorter path = less aging.

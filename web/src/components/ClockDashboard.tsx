@@ -343,15 +343,15 @@ export function ClockDashboard() {
           <div style={styles.infoTitle}>Live Drift ({elapsed.toFixed(0)}s elapsed)</div>
           <div style={styles.driftRow}>
             <span>TCG vs TT</span>
-            <span style={{ color: "#06b6d4" }}>+{(elapsed * 0.6969).toFixed(3)} ns</span>
+            <span style={{ color: "#06b6d4" }}>+{(isNaN(elapsed) ? 0 : elapsed * 0.6969).toFixed(3)} ns</span>
           </div>
           <div style={styles.driftRow}>
             <span>TCB vs TT</span>
-            <span style={{ color: "#14b8a6" }}>+{(elapsed * 15.505).toFixed(1)} ns</span>
+            <span style={{ color: "#14b8a6" }}>+{(isNaN(elapsed) ? 0 : elapsed * 15.505).toFixed(1)} ns</span>
           </div>
           <div style={styles.driftRow}>
             <span>MTC vs UTC</span>
-            <span style={{ color: "#f59e0b" }}>+{(elapsed * 0.02749).toFixed(1)}s</span>
+            <span style={{ color: "#f59e0b" }}>+{(isNaN(elapsed) ? 0 : elapsed * 0.02749).toFixed(1)}s</span>
           </div>
         </div>
 
