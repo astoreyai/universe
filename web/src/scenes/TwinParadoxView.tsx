@@ -270,6 +270,12 @@ export function TwinParadoxView() {
           </div>
         </div>
 
+        {/* Visual effects key */}
+        <div style={{ fontSize: "10px", color: "#64748b", lineHeight: 1.5 }}>
+          <div><span style={{ color: "#3b82f6" }}>{"\u25A0"}</span> Grid lines contract along motion direction (1/{"\u03B3"} = {Math.sqrt(1 - active.speed * active.speed).toFixed(3)})</div>
+          <div><span style={{ color: "#60a5fa" }}>{"\u2605"}</span> Stars shift <span style={{ color: "#60a5fa" }}>blue</span> (approaching) / <span style={{ color: "#ef4444" }}>red</span> (receding) — Doppler effect</div>
+        </div>
+
         {/* Learn More — collapsible */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontSize: "11px", color: "#64748b", fontWeight: 600 }}

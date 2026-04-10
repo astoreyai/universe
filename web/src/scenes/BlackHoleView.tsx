@@ -260,7 +260,7 @@ export function BlackHoleView() {
 
               {/* Why This Matters */}
               <div style={{ ...styles.infoCard, marginTop: "6px" }}>
-                The closer to the event horizon, the slower time moves. At dilation = 0.1 (extreme zone), 1 second for you = 10 seconds for a distant observer. Accretion disks shine because matter spirals inward through this extreme dilation, converting gravitational energy to radiation — powering quasars visible across billions of light-years.
+                The closer to the event horizon, the slower time moves. At dilation = 0.1, 1 second for you = 10 for a distant observer. The distorted starfield is gravitational lensing — light bends around the black hole, forming an Einstein ring. Accretion disks glow because infalling matter converts gravitational energy to radiation — powering quasars across billions of light-years.
               </div>
             </>
           )}
