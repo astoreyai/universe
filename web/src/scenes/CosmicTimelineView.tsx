@@ -91,6 +91,7 @@ export function CosmicTimelineView() {
 
   // Detect milestone crossings and flash panel border
   useEffect(() => {
+    let timerId: ReturnType<typeof setTimeout> | undefined;
     // Find closest milestone
     const milestoneLookup = MILESTONES.map(m => {
       try {
@@ -108,9 +109,10 @@ export function CosmicTimelineView() {
     const currentMs = isNear ? closest.label : null;
     if (currentMs && currentMs !== prevMilestoneRef.current) {
       setPanelFlashColor(closest.color);
-      setTimeout(() => setPanelFlashColor(null), 600);
+      timerId = setTimeout(() => setPanelFlashColor(null), 600);
     }
     prevMilestoneRef.current = currentMs;
+    return () => { if (timerId !== undefined) clearTimeout(timerId); };
   }, [epochAge]);
 
   const ageLookup = useMemo(() => {
