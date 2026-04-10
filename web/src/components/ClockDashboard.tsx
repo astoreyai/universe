@@ -283,7 +283,7 @@ export function ClockDashboard() {
 
         <div style={{ background: "#0f172a", borderLeft: "3px solid #34d399", padding: "8px", borderRadius: "6px" }}>
           <div style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", marginBottom: "2px" }}>1-Minute Takeaway</div>
-          <div style={{ fontSize: "10px", color: "#ffffff", lineHeight: 1.5 }}>GPS uses TCG/TCB because Earth's gravity slows clocks. Without relativistic correction, GPS maps drift 10 km per day.</div>
+          <div style={{ fontSize: "10px", color: "#ffffff", lineHeight: 1.5 }}>Every clock in the universe ticks at a different rate depending on gravity and speed. These 6 time scales are humanity's attempt to keep track of them all.</div>
         </div>
 
         <div style={styles.clockList}>
@@ -358,9 +358,7 @@ export function ClockDashboard() {
         <div style={styles.infoCard}>
           <div style={styles.infoTitle}>Why It Matters</div>
           <div style={styles.whyText}>
-            GPS satellites carry atomic clocks that tick +38.6 {"\u03BCs"}/day faster than ground clocks
-            due to gravitational time dilation. Without relativistic corrections,
-            GPS positioning would drift {"\u223C"}10 km/day.
+            Different time scales exist because gravity and motion affect the rate of time. UTC keeps civil clocks synchronized. TAI provides a continuous atomic standard. TT removes Earth's gravity. TCG and TCB represent time free from gravitational wells {"\u2014"} essential for precision navigation between planets.
           </div>
         </div>
 

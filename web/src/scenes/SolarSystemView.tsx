@@ -866,7 +866,7 @@ function getRelativityNote(name: string): string {
   switch (name) {
     case "Mercury": return "Closest to Sun \u2014 strongest solar gravity dilation among planets";
     case "Venus": return "Deep in Sun's gravity well \u2014 second strongest planetary dilation";
-    case "Earth": return "Our reference frame \u2014 GPS must correct +38.6 \u03BCs/day for orbiting clocks";
+    case "Earth": return "Reference frame for human timekeeping. All other planets' clocks are compared to Earth's surface.";
     case "Mars": return "Weaker solar gravity \u2014 clocks tick slightly faster than on Earth";
     case "Jupiter": return "Most massive planet \u2014 deepest gravity well after Sun";
     case "Saturn": return "Significant mass creates measurable gravity dilation at its surface";
